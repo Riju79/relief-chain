@@ -1,0 +1,972 @@
+{
+  "reports": [
+    {
+      "id": "report-1780062837954",
+      "title": "gtg",
+      "location": "rrt",
+      "severity": "critical",
+      "desc": "rrrrrrrrrrrrrrrrrrrrrrrrr",
+      "evidenceBlobId": "walrus_blob_DP0YFwESVMB7ywvHkIJaWAmtom1C",
+      "evidenceUrl": "/api/evidence/raw/walrus_blob_DP0YFwESVMB7ywvHkIJaWAmtom1C",
+      "mimeType": "application/pdf",
+      "walletAddress": "0x8686499cc35a2e08d2a17b44d90bbb2b8d74ef81814dc75ee3b485d817fb7113",
+      "timestamp": 1780062837954,
+      "status": "rejected",
+      "aiAnalysis": {
+        "category": "River/Flash Flooding",
+        "severity": "critical",
+        "confidence": 84.8,
+        "tags": [
+          "submerged structures",
+          "water displacement",
+          "rescue ready"
+        ],
+        "authentic": true,
+        "authenticityScore": 67.5,
+        "authenticityFlags": []
+      },
+      "evidences": [
+        {
+          "blobId": "walrus_blob_DP0YFwESVMB7ywvHkIJaWAmtom1C",
+          "evidenceUrl": "/api/evidence/raw/walrus_blob_DP0YFwESVMB7ywvHkIJaWAmtom1C",
+          "fileName": "Assam_Flood_Emergency_Relief_Fund_Budget_Audit.pdf",
+          "fileSize": 4453,
+          "mimeType": "application/pdf",
+          "aiAnalysis": {
+            "category": "River/Flash Flooding",
+            "severity": "critical",
+            "confidence": 84.8,
+            "tags": [
+              "submerged structures",
+              "water displacement",
+              "rescue ready"
+            ],
+            "authentic": true,
+            "authenticityScore": 67.5,
+            "authenticityFlags": [
+              "File suspiciously small — possible placeholder or screenshot"
+            ]
+          },
+          "isLocal": true
+        }
+      ],
+      "rejectedAt": 1780062887142,
+      "rejectionReason": "Admin governance review"
+    },
+    {
+      "id": "report-1780062753444",
+      "title": "fund raise for wildfire on amazon rainforest",
+      "location": "regergrh",
+      "severity": "critical",
+      "desc": "tttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt",
+      "evidenceBlobId": "walrus_blob_5Bq4AxFUwIMAcphLSAxdwA5IC8j8",
+      "evidenceUrl": "/api/evidence/raw/walrus_blob_5Bq4AxFUwIMAcphLSAxdwA5IC8j8",
+      "mimeType": "video/mp4",
+      "walletAddress": "0x8686499cc35a2e08d2a17b44d90bbb2b8d74ef81814dc75ee3b485d817fb7113",
+      "timestamp": 1780062753444,
+      "status": "rejected",
+      "aiAnalysis": {
+        "category": "Wildfire / Building Fire",
+        "severity": "critical",
+        "confidence": 85.4,
+        "tags": [
+          "active smoke columns",
+          "heat signature",
+          "structural damage"
+        ],
+        "authentic": true,
+        "authenticityScore": 99.4,
+        "authenticityFlags": []
+      },
+      "evidences": [
+        {
+          "blobId": "walrus_blob_5Bq4AxFUwIMAcphLSAxdwA5IC8j8",
+          "evidenceUrl": "/api/evidence/raw/walrus_blob_5Bq4AxFUwIMAcphLSAxdwA5IC8j8",
+          "fileName": "THE AMAZON IS BURNING (1) (1).mp4",
+          "fileSize": 7807019,
+          "mimeType": "video/mp4",
+          "aiAnalysis": {
+            "category": "Wildfire / Building Fire",
+            "severity": "critical",
+            "confidence": 85.4,
+            "tags": [
+              "active smoke columns",
+              "heat signature",
+              "structural damage"
+            ],
+            "authentic": true,
+            "authenticityScore": 99.4,
+            "authenticityFlags": []
+          },
+          "isLocal": true
+        }
+      ],
+      "rejectedAt": 1780062777649,
+      "rejectionReason": "Admin governance review"
+    },
+    {
+      "id": "report-1780062565992",
+      "title": "amazon wildfire",
+      "location": "amazon",
+      "severity": "medium",
+      "desc": "tyutyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy",
+      "evidenceBlobId": "walrus_blob_r1Z4Bftb8OejyIzfYxyFWGFDACQe",
+      "evidenceUrl": "/api/evidence/raw/walrus_blob_r1Z4Bftb8OejyIzfYxyFWGFDACQe",
+      "mimeType": "image/jpeg",
+      "walletAddress": "0x8686499cc35a2e08d2a17b44d90bbb2b8d74ef81814dc75ee3b485d817fb7113",
+      "timestamp": 1780062565992,
+      "status": "rejected",
+      "aiAnalysis": {
+        "category": "Disaster Evidence",
+        "severity": "medium",
+        "confidence": 84.9,
+        "tags": [
+          "evidence",
+          "humanitarian"
+        ],
+        "authentic": true,
+        "authenticityScore": 82.8,
+        "authenticityFlags": []
+      },
+      "evidences": [
+        {
+          "blobId": "walrus_blob_r1Z4Bftb8OejyIzfYxyFWGFDACQe",
+          "evidenceUrl": "/api/evidence/raw/walrus_blob_r1Z4Bftb8OejyIzfYxyFWGFDACQe",
+          "fileName": "0pLMm_z94H8D3GKOjxRhrXGY6tTdLjuIgbyWNgc0XVubjjm5ciNVcAMwVtZ9ijb0LDsK6QvrEVzDtJaJ5m1MXFZWNj2hVxk4XGd2xQrYSBQREOXdt59y1kGzYHL4qQKUeIwPLH59E4RnBchdyb37ALwSh2RQYK_a-q0MshuVN2u7M-is4nhApkXBi1j3EiLp.jpg",
+          "fileSize": 21475,
+          "mimeType": "image/jpeg",
+          "aiAnalysis": {
+            "category": "Disaster Evidence",
+            "severity": "medium",
+            "confidence": 84.9,
+            "tags": [
+              "evidence",
+              "humanitarian"
+            ],
+            "authentic": true,
+            "authenticityScore": 82.8,
+            "authenticityFlags": [
+              "Low file size detected — reduced confidence"
+            ]
+          },
+          "isLocal": true
+        }
+      ],
+      "rejectedAt": 1780062781970,
+      "rejectionReason": "Admin governance review"
+    },
+    {
+      "id": "report-1780060346277",
+      "title": "wildfire support relief",
+      "location": "-amazon rainforest",
+      "severity": "critical",
+      "desc": "helicopter to rescue us,food,water,shelter,medicine,resources,etc.",
+      "evidenceBlobId": "walrus_blob_1sPYRos8acxX6yAhl7k2IocmXrgE",
+      "evidenceUrl": "/api/evidence/raw/walrus_blob_1sPYRos8acxX6yAhl7k2IocmXrgE",
+      "mimeType": "image/jpeg",
+      "walletAddress": "0x8686499cc35a2e08d2a17b44d90bbb2b8d74ef81814dc75ee3b485d817fb7113",
+      "timestamp": 1780060346277,
+      "status": "pending",
+      "aiAnalysis": {
+        "category": "Disaster Evidence",
+        "severity": "medium",
+        "confidence": 84.1,
+        "tags": [
+          "evidence",
+          "humanitarian"
+        ],
+        "authentic": true,
+        "authenticityScore": 98.5,
+        "authenticityFlags": []
+      },
+      "evidences": [
+        {
+          "blobId": "walrus_blob_1sPYRos8acxX6yAhl7k2IocmXrgE",
+          "evidenceUrl": "/api/evidence/raw/walrus_blob_1sPYRos8acxX6yAhl7k2IocmXrgE",
+          "fileName": "fbc851c4-gp1szphr_-1024x683.jpg",
+          "fileSize": 114620,
+          "mimeType": "image/jpeg",
+          "aiAnalysis": {
+            "category": "Disaster Evidence",
+            "severity": "medium",
+            "confidence": 84.1,
+            "tags": [
+              "evidence",
+              "humanitarian"
+            ],
+            "authentic": true,
+            "authenticityScore": 98,
+            "authenticityFlags": []
+          },
+          "isLocal": true
+        },
+        {
+          "blobId": "walrus_blob_nrwhHLnorhP0JmpWeN45xlrzex02",
+          "evidenceUrl": "/api/evidence/raw/walrus_blob_nrwhHLnorhP0JmpWeN45xlrzex02",
+          "fileName": "Amazon-Fires-2024-Science-shutterstock_editorial_14161691g.webp",
+          "fileSize": 239020,
+          "mimeType": "image/webp",
+          "aiAnalysis": {
+            "category": "Wildfire / Building Fire",
+            "severity": "critical",
+            "confidence": 89.2,
+            "tags": [
+              "active smoke columns",
+              "heat signature",
+              "structural damage"
+            ],
+            "authentic": true,
+            "authenticityScore": 97.6,
+            "authenticityFlags": []
+          },
+          "isLocal": true
+        },
+        {
+          "blobId": "walrus_blob_4qmI2lvNA7IQv9zCQ2k_V6uUKvI2",
+          "evidenceUrl": "/api/evidence/raw/walrus_blob_4qmI2lvNA7IQv9zCQ2k_V6uUKvI2",
+          "fileName": "THE AMAZON IS BURNING (1) (1).mp4",
+          "fileSize": 7807019,
+          "mimeType": "video/mp4",
+          "aiAnalysis": {
+            "category": "Wildfire / Building Fire",
+            "severity": "critical",
+            "confidence": 85.1,
+            "tags": [
+              "active smoke columns",
+              "heat signature",
+              "structural damage"
+            ],
+            "authentic": true,
+            "authenticityScore": 100,
+            "authenticityFlags": []
+          },
+          "isLocal": true
+        }
+      ]
+    },
+    {
+      "id": "report-1780007358459",
+      "title": "amazon wildfire",
+      "location": "amazon",
+      "severity": "medium",
+      "desc": "r5yg56yh",
+      "evidenceBlobId": "walrus_blob_7tpxVZNPOI0uhOFF1peys26pBrn7",
+      "evidenceUrl": "/api/evidence/raw/walrus_blob_7tpxVZNPOI0uhOFF1peys26pBrn7",
+      "mimeType": "image/jpeg",
+      "walletAddress": "0x8686499cc35a2e08d2a17b44d90bbb2b8d74ef81814dc75ee3b485d817fb7113",
+      "timestamp": 1780007358459,
+      "status": "rejected",
+      "aiAnalysis": {
+        "category": "Disaster Evidence",
+        "severity": "medium",
+        "confidence": 80.9,
+        "tags": [
+          "evidence",
+          "humanitarian"
+        ],
+        "authentic": true,
+        "authenticityScore": 98.1,
+        "authenticityFlags": []
+      },
+      "evidences": [
+        {
+          "blobId": "walrus_blob_7tpxVZNPOI0uhOFF1peys26pBrn7",
+          "evidenceUrl": "/api/evidence/raw/walrus_blob_7tpxVZNPOI0uhOFF1peys26pBrn7",
+          "fileName": "fbc851c4-gp1szphr_-1024x683.jpg",
+          "fileSize": 114620,
+          "mimeType": "image/jpeg",
+          "aiAnalysis": {
+            "category": "Disaster Evidence",
+            "severity": "medium",
+            "confidence": 80.9,
+            "tags": [
+              "evidence",
+              "humanitarian"
+            ],
+            "authentic": true,
+            "authenticityScore": 98.1,
+            "authenticityFlags": []
+          },
+          "isLocal": true
+        }
+      ],
+      "rejectedAt": 1780007369728,
+      "rejectionReason": "Admin governance review"
+    },
+    {
+      "id": "report-1779999440151",
+      "title": "iaguuierg",
+      "location": "regergrh",
+      "severity": "critical",
+      "desc": "rhrhtrhtrtbrtbtt",
+      "evidenceBlobId": "walrus_blob_FcFdZcA3VPxR21d-gCTLVgpeX0uU",
+      "evidenceUrl": "/api/evidence/raw/walrus_blob_FcFdZcA3VPxR21d-gCTLVgpeX0uU",
+      "mimeType": "application/pdf",
+      "walletAddress": "0x5313936ab87ed60dc8a11a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a",
+      "timestamp": 1779999440151,
+      "status": "rejected",
+      "aiAnalysis": {
+        "category": "River/Flash Flooding",
+        "severity": "critical",
+        "confidence": 91.4,
+        "tags": [
+          "submerged structures",
+          "water displacement",
+          "rescue ready"
+        ],
+        "authentic": true,
+        "authenticityScore": 68.9,
+        "authenticityFlags": []
+      },
+      "evidences": [
+        {
+          "blobId": "walrus_blob_FcFdZcA3VPxR21d-gCTLVgpeX0uU",
+          "evidenceUrl": "/api/evidence/raw/walrus_blob_FcFdZcA3VPxR21d-gCTLVgpeX0uU",
+          "fileName": "Assam_Flood_Emergency_Relief_Fund_Budget_Audit.pdf",
+          "fileSize": 4453,
+          "mimeType": "application/pdf",
+          "aiAnalysis": {
+            "category": "River/Flash Flooding",
+            "severity": "critical",
+            "confidence": 91.4,
+            "tags": [
+              "submerged structures",
+              "water displacement",
+              "rescue ready"
+            ],
+            "authentic": true,
+            "authenticityScore": 68.9,
+            "authenticityFlags": [
+              "File suspiciously small — possible placeholder or screenshot"
+            ]
+          },
+          "isLocal": true
+        }
+      ],
+      "rejectedAt": 1780000568916,
+      "rejectionReason": "Admin governance review"
+    },
+    {
+      "id": "report-1779999320892",
+      "title": "fund raise for wildfire on amazon rainforest",
+      "location": "amazon, africa",
+      "severity": "medium",
+      "desc": "resources,helicopter to rescue,shelter,water,food,medicine",
+      "evidenceBlobId": "walrus_blob_RgPzbU5Uth5Hj-JcvOIz9K8O9QJl",
+      "evidenceUrl": "/api/evidence/raw/walrus_blob_RgPzbU5Uth5Hj-JcvOIz9K8O9QJl",
+      "mimeType": "image/jpeg",
+      "walletAddress": "0x5313936ab87ed60dc8a11a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a",
+      "timestamp": 1779999320892,
+      "status": "approved",
+      "aiAnalysis": {
+        "category": "Disaster Evidence",
+        "severity": "medium",
+        "confidence": 90.1,
+        "tags": [
+          "evidence",
+          "humanitarian"
+        ],
+        "authentic": true,
+        "authenticityScore": 100,
+        "authenticityFlags": []
+      },
+      "evidences": [
+        {
+          "blobId": "walrus_blob_RgPzbU5Uth5Hj-JcvOIz9K8O9QJl",
+          "evidenceUrl": "/api/evidence/raw/walrus_blob_RgPzbU5Uth5Hj-JcvOIz9K8O9QJl",
+          "fileName": "fbc851c4-gp1szphr_-1024x683.jpg",
+          "fileSize": 114620,
+          "mimeType": "image/jpeg",
+          "aiAnalysis": {
+            "category": "Disaster Evidence",
+            "severity": "medium",
+            "confidence": 90.1,
+            "tags": [
+              "evidence",
+              "humanitarian"
+            ],
+            "authentic": true,
+            "authenticityScore": 100,
+            "authenticityFlags": []
+          },
+          "isLocal": true
+        }
+      ],
+      "approvedAt": 1779999338303
+    },
+    {
+      "id": "report-1779960522929",
+      "title": "amazon wildfire",
+      "location": "amazon",
+      "severity": "critical",
+      "desc": "qkjrfufbhbfuvvvkjqjrfiugrf",
+      "evidenceBlobId": "walrus_blob_YeC0ge9SqfdINe8xzdSdCT4WrbHH",
+      "evidenceUrl": "/api/evidence/raw/walrus_blob_YeC0ge9SqfdINe8xzdSdCT4WrbHH",
+      "mimeType": "application/pdf",
+      "walletAddress": "0x5313936ab87ed60dc8a11a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a",
+      "timestamp": 1779960522929,
+      "status": "rejected",
+      "aiAnalysis": {
+        "category": "River/Flash Flooding",
+        "severity": "critical",
+        "confidence": 82.7,
+        "tags": [
+          "submerged structures",
+          "water displacement",
+          "rescue ready"
+        ],
+        "authentic": true,
+        "authenticityScore": 83.1,
+        "authenticityFlags": []
+      },
+      "evidences": [
+        {
+          "blobId": "walrus_blob_YeC0ge9SqfdINe8xzdSdCT4WrbHH",
+          "evidenceUrl": "/api/evidence/raw/walrus_blob_YeC0ge9SqfdINe8xzdSdCT4WrbHH",
+          "fileName": "Assam_Flood_Emergency_Relief_Fund_Budget_Audit.pdf",
+          "fileSize": 4453,
+          "mimeType": "application/pdf",
+          "aiAnalysis": {
+            "category": "River/Flash Flooding",
+            "severity": "critical",
+            "confidence": 82.7,
+            "tags": [
+              "submerged structures",
+              "water displacement",
+              "rescue ready"
+            ],
+            "authentic": true,
+            "authenticityScore": 67.7,
+            "authenticityFlags": [
+              "File suspiciously small — possible placeholder or screenshot"
+            ]
+          },
+          "isLocal": true
+        },
+        {
+          "blobId": "walrus_blob_CicVWMHcM41eHvW7NHZHYqGmDGrc",
+          "evidenceUrl": "/api/evidence/raw/walrus_blob_CicVWMHcM41eHvW7NHZHYqGmDGrc",
+          "fileName": "fbc851c4-gp1szphr_-1024x683.jpg",
+          "fileSize": 114620,
+          "mimeType": "image/jpeg",
+          "aiAnalysis": {
+            "category": "Disaster Evidence",
+            "severity": "medium",
+            "confidence": 80.9,
+            "tags": [
+              "evidence",
+              "humanitarian"
+            ],
+            "authentic": true,
+            "authenticityScore": 98.5,
+            "authenticityFlags": []
+          },
+          "isLocal": true
+        }
+      ],
+      "rejectedAt": 1779995585239,
+      "rejectionReason": "Admin governance review"
+    },
+    {
+      "id": "report-1779960145995",
+      "title": "Multiple Evidence Disaster Report Test",
+      "location": "Cachar, Assam",
+      "severity": "critical",
+      "desc": "Severe landslide and budget plan validation test.",
+      "evidenceBlobId": "walrus_blob_oaOopizYxYWV-vWxqhwdAUOCjSrt",
+      "evidenceUrl": "/api/evidence/raw/walrus_blob_oaOopizYxYWV-vWxqhwdAUOCjSrt",
+      "mimeType": "image/jpeg",
+      "walletAddress": "0x1234567890123456789012345678901234567890",
+      "timestamp": 1779960145995,
+      "status": "rejected",
+      "aiAnalysis": {
+        "category": "Disaster Evidence",
+        "severity": "medium",
+        "confidence": 92,
+        "tags": [
+          "evidence",
+          "humanitarian"
+        ],
+        "authentic": true,
+        "authenticityScore": 70.6,
+        "authenticityFlags": [
+          "File suspiciously small — possible placeholder or screenshot"
+        ]
+      },
+      "evidences": [
+        {
+          "blobId": "walrus_blob_oaOopizYxYWV-vWxqhwdAUOCjSrt",
+          "evidenceUrl": "/api/evidence/raw/walrus_blob_oaOopizYxYWV-vWxqhwdAUOCjSrt",
+          "fileName": "disaster1.jpg",
+          "fileSize": 45,
+          "mimeType": "image/jpeg",
+          "aiAnalysis": {
+            "category": "Disaster Evidence",
+            "severity": "medium",
+            "confidence": 92,
+            "tags": [
+              "evidence",
+              "humanitarian"
+            ],
+            "authentic": true,
+            "authenticityScore": 70.6,
+            "authenticityFlags": [
+              "File suspiciously small — possible placeholder or screenshot"
+            ]
+          }
+        },
+        {
+          "blobId": "walrus_blob_612rYBKjVhSuuEy0IAl4atT0Qvu6",
+          "evidenceUrl": "/api/evidence/raw/walrus_blob_612rYBKjVhSuuEy0IAl4atT0Qvu6",
+          "fileName": "budget.pdf",
+          "fileSize": 50,
+          "mimeType": "application/pdf",
+          "aiAnalysis": {
+            "category": "Verifiable Budget Plan",
+            "severity": "low",
+            "confidence": 80.3,
+            "tags": [
+              "financial records",
+              "NGO verification",
+              "milestone ledger"
+            ],
+            "authentic": true,
+            "authenticityScore": 62.7,
+            "authenticityFlags": [
+              "File suspiciously small — possible placeholder or screenshot"
+            ]
+          }
+        }
+      ],
+      "rejectedAt": 1779995590308,
+      "rejectionReason": "Admin governance review"
+    },
+    {
+      "id": "report-1779960104041",
+      "title": "Multiple Evidence Disaster Report Test",
+      "location": "Cachar, Assam",
+      "severity": "critical",
+      "desc": "Severe landslide and budget plan validation test.",
+      "evidenceBlobId": "walrus_blob_CmcUCbS4L_wFe4nslqJKfegQYaRt",
+      "evidenceUrl": "/api/evidence/raw/walrus_blob_CmcUCbS4L_wFe4nslqJKfegQYaRt",
+      "mimeType": "image/jpeg",
+      "walletAddress": "0x1234567890123456789012345678901234567890",
+      "timestamp": 1779960104041,
+      "status": "rejected",
+      "aiAnalysis": {
+        "category": "Disaster Evidence",
+        "severity": "medium",
+        "confidence": 91.9,
+        "tags": [
+          "evidence",
+          "humanitarian"
+        ],
+        "authentic": true,
+        "authenticityScore": 65.2,
+        "authenticityFlags": [
+          "File suspiciously small — possible placeholder or screenshot"
+        ]
+      },
+      "rejectedAt": 1779995586769,
+      "rejectionReason": "Admin governance review"
+    },
+    {
+      "id": "report-1779959746383",
+      "title": "amazon wildfire",
+      "location": "amazon",
+      "severity": "medium",
+      "desc": "food,helicopter to rescue ,water,",
+      "evidenceBlobId": "walrus_blob_DkV_dbHNViJZqlCHqMCiuh6s35rF",
+      "evidenceUrl": "/api/evidence/raw/walrus_blob_DkV_dbHNViJZqlCHqMCiuh6s35rF",
+      "mimeType": "image/jpeg",
+      "walletAddress": "0x5313936ab87ed60dc8a11a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a",
+      "timestamp": 1779959746383,
+      "status": "rejected",
+      "aiAnalysis": {
+        "category": "Disaster Evidence",
+        "severity": "medium",
+        "confidence": 89.3,
+        "tags": [
+          "evidence",
+          "humanitarian"
+        ],
+        "authentic": true,
+        "authenticityScore": 98.4,
+        "authenticityFlags": []
+      },
+      "rejectedAt": 1779960578537,
+      "rejectionReason": "Admin governance review"
+    },
+    {
+      "id": "report-1779959677964",
+      "title": "amazon wildfire",
+      "location": "amazon",
+      "severity": "medium",
+      "desc": "food,resources, helicopter to rescue ,water",
+      "evidenceBlobId": "walrus_blob_dm3rV5yJiLsbGoNU-uf2gWBORjOW",
+      "evidenceUrl": "/api/evidence/raw/walrus_blob_dm3rV5yJiLsbGoNU-uf2gWBORjOW",
+      "mimeType": "image/jpeg",
+      "walletAddress": "0x5313936ab87ed60dc8a11a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a",
+      "timestamp": 1779959677964,
+      "status": "rejected",
+      "aiAnalysis": {
+        "category": "Disaster Evidence",
+        "severity": "medium",
+        "confidence": 93.2,
+        "tags": [
+          "evidence",
+          "humanitarian"
+        ],
+        "authentic": true,
+        "authenticityScore": 100,
+        "authenticityFlags": []
+      },
+      "rejectedAt": 1779960580444,
+      "rejectionReason": "Admin governance review"
+    },
+    {
+      "id": "report-1779958962377",
+      "title": "heavy flood",
+      "location": "kolkata",
+      "severity": "medium",
+      "desc": "tstrfiufyrstsuyguytrs",
+      "evidenceBlobId": "walrus_blob_mP3GvpvSXw1ng5zJSv4kPj575zJk",
+      "evidenceUrl": "/api/evidence/raw/walrus_blob_mP3GvpvSXw1ng5zJSv4kPj575zJk",
+      "mimeType": "",
+      "walletAddress": "0x5313936ab87ed60dc8a11a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a",
+      "timestamp": 1779958962377,
+      "status": "rejected",
+      "aiAnalysis": {
+        "category": "Disaster Evidence",
+        "severity": "medium",
+        "confidence": 91.1,
+        "tags": [
+          "evidence",
+          "humanitarian"
+        ],
+        "authentic": true,
+        "authenticityScore": 99.1,
+        "authenticityFlags": []
+      },
+      "rejectedAt": 1779995587884,
+      "rejectionReason": "Admin governance review"
+    },
+    {
+      "id": "ai-agent-1779918820163",
+      "title": "Tropical Cyclone Wind Damage",
+      "location": "Odisha, India",
+      "severity": "critical",
+      "desc": "Satellite scatterometer data shows wind speeds exceeding 120 km/h. Coastal community centers reporting structural roof damages and power grid collapse. Rebuilding materials and emergency solar lamps required.",
+      "evidenceBlobId": "walrus_blob_ai_FXNSrcmnKNRlG9KPgESZnJPK",
+      "evidenceUrl": "https://aggregator.walrus-testnet.walrus.space/v1/blobs/walrus_blob_ai_FXNSrcmnKNRlG9KPgESZnJPK",
+      "rawUrl": "https://aggregator.walrus-testnet.walrus.space/v1/blobs/walrus_blob_ai_FXNSrcmnKNRlG9KPgESZnJPK",
+      "mimeType": "application/json",
+      "walletAddress": "0x_ai_agent_oracle_ledger",
+      "timestamp": 1779918820163,
+      "status": "rejected",
+      "aiAnalysis": {
+        "category": "Tropical Cyclone",
+        "severity": "critical",
+        "confidence": 99.8,
+        "tags": [
+          "ai-telemetry",
+          "satellite-data",
+          "automated-alert"
+        ],
+        "authentic": true,
+        "authenticityScore": 99.8,
+        "authenticityFlags": []
+      },
+      "rejectedAt": 1779995588665,
+      "rejectionReason": "Admin governance review"
+    },
+    {
+      "id": "ai-agent-1779918778830",
+      "title": "Severe Flash Flooding & Overflow",
+      "location": "Sylhet, Bangladesh",
+      "severity": "critical",
+      "desc": "AI Telemetry Oracle reports critical overflow of the Surma River. Over 15,000 households displaced, requiring immediate emergency dry rations and water purification tablets.",
+      "evidenceBlobId": "walrus_blob_ai_nSh3eCSf2dmys21k1gj0sARC",
+      "evidenceUrl": "https://aggregator.walrus-testnet.walrus.space/v1/blobs/walrus_blob_ai_nSh3eCSf2dmys21k1gj0sARC",
+      "rawUrl": "https://aggregator.walrus-testnet.walrus.space/v1/blobs/walrus_blob_ai_nSh3eCSf2dmys21k1gj0sARC",
+      "mimeType": "application/json",
+      "walletAddress": "0x_ai_agent_oracle_ledger",
+      "timestamp": 1779918778830,
+      "status": "rejected",
+      "aiAnalysis": {
+        "category": "River/Flash Flooding",
+        "severity": "critical",
+        "confidence": 99.8,
+        "tags": [
+          "ai-telemetry",
+          "satellite-data",
+          "automated-alert"
+        ],
+        "authentic": true,
+        "authenticityScore": 99.8,
+        "authenticityFlags": []
+      },
+      "rejectedAt": 1779995591590,
+      "rejectionReason": "Admin governance review"
+    },
+    {
+      "id": "ai-agent-1779918740243",
+      "title": "Severe Flash Flooding & Overflow",
+      "location": "Sylhet, Bangladesh",
+      "severity": "critical",
+      "desc": "AI Telemetry Oracle reports critical overflow of the Surma River. Over 15,000 households displaced, requiring immediate emergency dry rations and water purification tablets.",
+      "evidenceBlobId": "walrus_blob_ai_WFSQ_EVauOch2WkGJ9ChwO-t",
+      "evidenceUrl": "https://aggregator.walrus-testnet.walrus.space/v1/blobs/walrus_blob_ai_WFSQ_EVauOch2WkGJ9ChwO-t",
+      "rawUrl": "https://aggregator.walrus-testnet.walrus.space/v1/blobs/walrus_blob_ai_WFSQ_EVauOch2WkGJ9ChwO-t",
+      "mimeType": "application/json",
+      "walletAddress": "0x_ai_agent_oracle_ledger",
+      "timestamp": 1779918740243,
+      "status": "rejected",
+      "aiAnalysis": {
+        "category": "River/Flash Flooding",
+        "severity": "critical",
+        "confidence": 99.8,
+        "tags": [
+          "ai-telemetry",
+          "satellite-data",
+          "automated-alert"
+        ],
+        "authentic": true,
+        "authenticityScore": 99.8,
+        "authenticityFlags": []
+      },
+      "rejectedAt": 1779995592928,
+      "rejectionReason": "Admin governance review"
+    },
+    {
+      "id": "report-1779917311524",
+      "title": "heavy flood",
+      "location": "kolkata",
+      "severity": "medium",
+      "desc": "food ,boats, shelters,resources",
+      "evidenceBlobId": "walrus_blob__KSZgRVvXO288fY8bkjVPF1Pd2gs",
+      "evidenceUrl": "https://aggregator.walrus.space/v1/blobs/walrus_blob__KSZgRVvXO288fY8bkjVPF1Pd2gs",
+      "mimeType": "",
+      "walletAddress": "0x5313936ab87ed60dc8a11a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a",
+      "timestamp": 1779917311524,
+      "status": "rejected",
+      "aiAnalysis": {
+        "category": "Disaster Evidence",
+        "severity": "medium",
+        "confidence": 90.5,
+        "tags": [
+          "evidence",
+          "humanitarian"
+        ],
+        "authentic": true,
+        "authenticityScore": 100,
+        "authenticityFlags": []
+      },
+      "rejectedAt": 1779960584833,
+      "rejectionReason": "Admin governance review"
+    },
+    {
+      "id": "remal",
+      "title": "Brahmaputra Basin Severe Flooding",
+      "location": "Assam, India",
+      "severity": "critical",
+      "desc": "Emergency rescue and humanitarian support for families affected by severe flooding near the Brahmaputra river basin.",
+      "evidenceBlobId": "walrus_blob_assam_flood_evidence_1",
+      "evidenceUrl": "http://localhost:3000/evidence__1.jpg",
+      "rawUrl": "https://aggregator.walrus-testnet.walrus.space/v1/blobs/walrus_blob_assam_flood_evidence_1",
+      "mimeType": "image/jpeg",
+      "walletAddress": "0x5313936ab87ed60dc8a11a1a1a1a1a1a1a1a1a1a100000000000000000000000",
+      "timestamp": 1779830730649,
+      "status": "approved",
+      "aiAnalysis": {
+        "category": "River/Flash Flooding",
+        "severity": "critical",
+        "confidence": 98.5,
+        "tags": [
+          "river levels",
+          "flooded basin",
+          "rescue boats"
+        ],
+        "authentic": true,
+        "authenticityScore": 98.5,
+        "authenticityFlags": []
+      }
+    },
+    {
+      "id": "assam",
+      "title": "Cyclone Idai Severe Impact",
+      "location": "Mozambique",
+      "severity": "critical",
+      "desc": "Supporting cyclone survivors with rebuilding aid, emergency housing, food support, and recovery resources.",
+      "evidenceBlobId": "walrus_blob_mozambique_cyclone_evidence",
+      "evidenceUrl": "https://aggregator.walrus.site/v1/blobs/walrus_blob_mozambique_cyclone_evidence",
+      "rawUrl": "https://aggregator.walrus-testnet.walrus.space/v1/blobs/walrus_blob_mozambique_cyclone_evidence",
+      "mimeType": "image/jpeg",
+      "walletAddress": "0x8f2dc55eb87ed60dc8a11a1a1a1a1a1a1a1a10000000000000000000000000",
+      "timestamp": 1779744330650,
+      "status": "approved",
+      "aiAnalysis": {
+        "category": "Tropical Cyclone",
+        "severity": "critical",
+        "confidence": 94.5,
+        "tags": [
+          "cyclone recovery",
+          "emergency shelter",
+          "rebuilding"
+        ],
+        "authentic": true,
+        "authenticityScore": 92.4,
+        "authenticityFlags": []
+      }
+    },
+    {
+      "id": "bushfire",
+      "title": "New South Wales Bushfire Crisis",
+      "location": "New South Wales, Australia",
+      "severity": "critical",
+      "desc": "Providing emergency shelter, food supplies, medical aid, and wildlife rescue support for communities affected by devastating bushfires across New South Wales.",
+      "evidenceBlobId": "walrus_blob_australia_bushfire_evidence",
+      "evidenceUrl": "https://aggregator.walrus.site/v1/blobs/walrus_blob_australia_bushfire_evidence",
+      "rawUrl": "https://aggregator.walrus-testnet.walrus.space/v1/blobs/walrus_blob_australia_bushfire_evidence",
+      "mimeType": "image/jpeg",
+      "walletAddress": "0x4313936ab87ed60dc8a11a1a1a1a1a1a1a1a1a1a000000000000000000000003",
+      "timestamp": 1779657930650,
+      "status": "approved",
+      "aiAnalysis": {
+        "category": "Wildfire / Building Fire",
+        "severity": "critical",
+        "confidence": 95.8,
+        "tags": [
+          "active fire columns",
+          "thermal anomalies",
+          "wildlife rescue"
+        ],
+        "authentic": true,
+        "authenticityScore": 96.2,
+        "authenticityFlags": []
+      }
+    }
+  ],
+  "campaigns": [
+    {
+      "id": "remal",
+      "title": "[DEMO] Flood Emergency Relief Fund — Assam, India",
+      "tag": "DEMO",
+      "isDemo": true,
+      "desc": "Emergency rescue and humanitarian support for families affected by severe flooding near the Brahmaputra river basin.",
+      "raised": 0,
+      "goal": 50000,
+      "walletAddress": "0x5313936ab87ed60dc8a11a1a1a1a1a1a1a1a1a1a100000000000000000000000",
+      "budgetBlobId": "walrus_blob_AssamFloodBudgetReport2026Img",
+      "budgetUrl": "https://aggregator.walrus.space/v1/blobs/walrus_blob_AssamFloodBudgetReport2026Img",
+      "ngoCredentialsBlobId": "walrus_blob_AssamFloodNgoCreds2026Img",
+      "ngoCredentialsUrl": "https://aggregator.walrus.space/v1/blobs/walrus_blob_AssamFloodNgoCreds2026Img"
+    },
+    {
+      "id": "assam",
+      "title": "[DEMO] Cyclone Recovery Support — Mozambique",
+      "tag": "DEMO",
+      "isDemo": true,
+      "desc": "Supporting cyclone survivors with rebuilding aid, emergency housing, food support, and recovery resources.",
+      "raised": 0,
+      "goal": 110000,
+      "walletAddress": "0x8f2dc55eb87ed60dc8a11a1a1a1a1a1a1a1a1a10000000000000000000000000",
+      "budgetBlobId": "walrus_blob_MozambiqueCycloneBudgetReport2026Img",
+      "budgetUrl": "https://aggregator.walrus.space/v1/blobs/walrus_blob_MozambiqueCycloneBudgetReport2026Img",
+      "ngoCredentialsBlobId": "walrus_blob_MozambiqueCycloneNgoCreds2026Img",
+      "ngoCredentialsUrl": "https://aggregator.walrus.space/v1/blobs/walrus_blob_MozambiqueCycloneNgoCreds2026Img"
+    },
+    {
+      "id": "bushfire",
+      "title": "[DEMO] Australia Bushfire Emergency Relief — New South Wales",
+      "tag": "DEMO",
+      "isDemo": true,
+      "desc": "Providing emergency shelter, food supplies, medical aid, and wildlife rescue support for communities affected by bushfires.",
+      "raised": 0,
+      "goal": 150000,
+      "walletAddress": "0x4313936ab87ed60dc8a11a1a1a1a1a1a1a1a1a1a000000000000000000000003",
+      "budgetBlobId": "walrus_blob_AustraliaBushfireBudgetReport2026Img",
+      "budgetUrl": "https://aggregator.walrus.space/v1/blobs/walrus_blob_AustraliaBushfireBudgetReport2026Img",
+      "ngoCredentialsBlobId": "walrus_blob_AustraliaBushfireNgoCreds2026Img",
+      "ngoCredentialsUrl": "https://aggregator.walrus.space/v1/blobs/walrus_blob_AustraliaBushfireNgoCreds2026Img"
+    }
+  ],
+  "reliefProof": [
+    {
+      "id": "proof-1",
+      "campaignId": "remal",
+      "title": "Rescue Boat Deployed for Evacuations",
+      "desc": "Emergency rescue boats deployed in flooded villages of Assam to evacuate stranded families.",
+      "proofBlobId": "vvwnzgCpbvSsZFKofNgfFimugCn2ySnoLhBw2H5Bg34",
+      "proofUrl": "https://aggregator.walrus-testnet.walrus.space/v1/blobs/vvwnzgCpbvSsZFKofNgfFimugCn2ySnoLhBw2H5Bg34",
+      "rawUrl": "https://aggregator.walrus-testnet.walrus.space/v1/blobs/vvwnzgCpbvSsZFKofNgfFimugCn2ySnoLhBw2H5Bg34",
+      "mimeType": "image/jpeg",
+      "timestamp": 1779909930650,
+      "coordinates": "26.14° N, 91.73° E"
+    },
+    {
+      "id": "proof-2",
+      "campaignId": "remal",
+      "title": "Emergency Tarpaulins Distributed",
+      "desc": "450 Waterproof shelter covers delivered directly to coastal Sundarbans agents.",
+      "proofBlobId": "walrus_proof_tarpaulins",
+      "proofUrl": "https://aggregator.walrus.site/v1/blobs/walrus_proof_tarpaulins",
+      "rawUrl": "https://aggregator.walrus-testnet.walrus.space/v1/blobs/walrus_proof_tarpaulins",
+      "mimeType": "image/jpeg",
+      "timestamp": 1779873930650,
+      "coordinates": "22.12° N, 88.92° E"
+    }
+  ],
+  "evidences": [
+    {
+      "id": "evidence-1779918820214",
+      "campaignId": "ai-agent-1779918820163",
+      "title": "Tropical Cyclone Wind Damage",
+      "description": "Satellite scatterometer data shows wind speeds exceeding 120 km/h. Coastal community centers reporting structural roof damages and power grid collapse. Rebuilding materials and emergency solar lamps required.",
+      "blobId": "walrus_blob_ai_FXNSrcmnKNRlG9KPgESZnJPK",
+      "rawUrl": "https://aggregator.walrus-testnet.walrus.space/v1/blobs/walrus_blob_ai_FXNSrcmnKNRlG9KPgESZnJPK",
+      "evidenceUrl": "https://aggregator.walrus-testnet.walrus.space/v1/blobs/walrus_blob_ai_FXNSrcmnKNRlG9KPgESZnJPK",
+      "fileType": "application/json",
+      "uploadedBy": "0x_ai_agent_oracle_ledger",
+      "timestamp": 1779918820163,
+      "aiAnalysis": {
+        "category": "Tropical Cyclone",
+        "severity": "critical",
+        "confidence": 99.8,
+        "tags": [
+          "ai-telemetry",
+          "satellite-data",
+          "automated-alert"
+        ],
+        "authentic": true,
+        "authenticityScore": 99.8,
+        "authenticityFlags": []
+      }
+    },
+    {
+      "id": "evidence-1779918778881",
+      "campaignId": "ai-agent-1779918778830",
+      "title": "Severe Flash Flooding & Overflow",
+      "description": "AI Telemetry Oracle reports critical overflow of the Surma River. Over 15,000 households displaced, requiring immediate emergency dry rations and water purification tablets.",
+      "blobId": "walrus_blob_ai_nSh3eCSf2dmys21k1gj0sARC",
+      "rawUrl": "https://aggregator.walrus-testnet.walrus.space/v1/blobs/walrus_blob_ai_nSh3eCSf2dmys21k1gj0sARC",
+      "evidenceUrl": "https://aggregator.walrus-testnet.walrus.space/v1/blobs/walrus_blob_ai_nSh3eCSf2dmys21k1gj0sARC",
+      "fileType": "application/json",
+      "uploadedBy": "0x_ai_agent_oracle_ledger",
+      "timestamp": 1779918778830,
+      "aiAnalysis": {
+        "category": "River/Flash Flooding",
+        "severity": "critical",
+        "confidence": 99.8,
+        "tags": [
+          "ai-telemetry",
+          "satellite-data",
+          "automated-alert"
+        ],
+        "authentic": true,
+        "authenticityScore": 99.8,
+        "authenticityFlags": []
+      }
+    }
+  ]
+}
