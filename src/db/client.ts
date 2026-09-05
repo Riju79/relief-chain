@@ -31,9 +31,14 @@ export async function getDb() {
 
   if (!dbInstance) {
     console.log('[ReliefChain DB] Initializing embedded PostgreSQL (PGlite) engine...');
-    const dataDir = path.resolve(process.cwd(), '.pgdata');
+    const isVercel = !!process.env.VERCEL;
+    const dataDir = process.env.PGDATA_DIR || (isVercel ? '/tmp/.pgdata' : path.resolve(process.cwd(), '.pgdata'));
     if (!fs.existsSync(dataDir)) {
-      fs.mkdirSync(dataDir, { recursive: true });
+      try {
+        fs.mkdirSync(dataDir, { recursive: true });
+      } catch (e: any) {
+        console.warn('[ReliefChain DB] Could not create dataDir:', e.message);
+      }
     }
     const client = new PGlite(dataDir);
     dbInstance = drizzlePglite(client, { schema });

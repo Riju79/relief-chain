@@ -72,9 +72,20 @@ const upload = multer({
   limits: { fileSize: 15 * 1024 * 1024 }
 });
 
-const DB_FILE = path.join(__dirname, 'metadata_db.json');
+const DB_FILE = process.env.VERCEL ? '/tmp/metadata_db.json' : path.join(__dirname, 'metadata_db.json');
 
 function initDb() {
+  if (process.env.VERCEL && !fs.existsSync(DB_FILE)) {
+    const seedPath = path.join(__dirname, 'metadata_db.json');
+    if (fs.existsSync(seedPath)) {
+      try {
+        fs.copyFileSync(seedPath, DB_FILE);
+      } catch (e) {
+        console.warn('[Vercel DB Seed Copy Warning]', e.message);
+      }
+    }
+  }
+
   if (!fs.existsSync(DB_FILE)) {
     const initialData = {
       reports: [
@@ -290,9 +301,13 @@ const runAutomatedTriage = runAiAuthentication;
 const WALRUS_PUBLISHER = process.env.WALRUS_PUBLISHER || 'https://publisher.walrus-testnet.walrus.space';
 const WALRUS_AGGREGATOR = process.env.WALRUS_AGGREGATOR || 'https://aggregator.walrus-testnet.walrus.space';
 
-const UPLOADS_DIR = path.join(__dirname, 'uploads');
+const UPLOADS_DIR = process.env.VERCEL ? '/tmp/uploads' : path.join(__dirname, 'uploads');
 if (!fs.existsSync(UPLOADS_DIR)) {
-  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+  try {
+    fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+  } catch (e) {
+    console.warn('[UPLOADS_DIR Warning]', e.message);
+  }
 }
 
 // ── SIWE-Style Sui Wallet Authentication Routes ───────────────────
@@ -764,7 +779,13 @@ app.post('/api/evidence/verify-integrity', async (req, res) => {
     let fileBuffer = null;
     // 1. Check local uploads cache first
     if (blobId) {
-      const localPath = path.join(UPLOADS_DIR, blobId);
+      let localPath = path.join(UPLOADS_DIR, blobId);
+      if (!fs.existsSync(localPath)) {
+        const fallbackPath = path.join(__dirname, 'uploads', blobId);
+        if (fs.existsSync(fallbackPath)) {
+          localPath = fallbackPath;
+        }
+      }
       if (fs.existsSync(localPath)) {
         fileBuffer = fs.readFileSync(localPath);
       }
@@ -816,7 +837,7 @@ app.get('/api/evidence/metadata/:blobId', (req, res) => {
     }
 
     const db = readDb();
-    const isLocal = fs.existsSync(path.join(UPLOADS_DIR, blobId));
+    const isLocal = fs.existsSync(path.join(UPLOADS_DIR, blobId)) || fs.existsSync(path.join(__dirname, 'uploads', blobId));
     const localUrl = `/api/evidence/raw/${blobId}`;
     
     // 1. Search in reports (checking both top-level and nested evidences array)
@@ -947,7 +968,13 @@ app.get('/api/evidence/metadata/:blobId', (req, res) => {
 app.get('/api/evidence/raw/:blobId', (req, res) => {
   try {
     const { blobId } = req.params;
-    const filePath = path.join(UPLOADS_DIR, blobId);
+    let filePath = path.join(UPLOADS_DIR, blobId);
+    if (!fs.existsSync(filePath)) {
+      const fallbackPath = path.join(__dirname, 'uploads', blobId);
+      if (fs.existsSync(fallbackPath)) {
+        filePath = fallbackPath;
+      }
+    }
 
     if (fs.existsSync(filePath)) {
       const metaPath = `${filePath}.meta`;
@@ -1023,10 +1050,14 @@ app.get('/api/config', (req, res) => {
 
 app.use(express.static(path.join(__dirname, './')));
 
-app.listen(PORT, () => {
-  console.log(`====================================================`);
-  console.log(`🌐 RELIEFCHAIN SECURE WALRUS SERVER RUNNING`);
-  console.log(`🚀 Port: http://localhost:${PORT}`);
-  console.log(`📂 Database: metadata_db.json`);
-  console.log(`====================================================`);
-});
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`====================================================`);
+    console.log(`🌐 RELIEFCHAIN SECURE WALRUS SERVER RUNNING`);
+    console.log(`🚀 Port: http://localhost:${PORT}`);
+    console.log(`📂 Database: metadata_db.json`);
+    console.log(`====================================================`);
+  });
+}
+
+export default app;

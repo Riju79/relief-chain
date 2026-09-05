@@ -2923,7 +2923,7 @@
       network: 'testnet',
       backendUrl: (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
         ? (window.location.port === '5173' ? 'http://localhost:3000' : '')
-        : 'https://relief-chain.onrender.com'
+        : window.location.origin
     };
   </script>
 
@@ -2932,7 +2932,7 @@
     import { getSuiBalance, getLatestCheckpoint, getWalletsList, connectWallet, donateSuiOnChain, createCampaignOnChain, fetchCampaignOnChain, getCleanErrorMessage, signPersonalMessage, checkUserCapabilities, verifyCampaignOnChain } from './suiConnection.js?v=12';
 
     // Global Backend URL for API calls
-    const BACKEND_URL = window.RELIEFCHAIN_CONFIG?.backendUrl || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:3000' : 'https://relief-chain.onrender.com');
+    const BACKEND_URL = window.RELIEFCHAIN_CONFIG?.backendUrl || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? (window.location.port === '5173' ? 'http://localhost:3000' : '') : window.location.origin);
 
     // State Variables
     let connectedWallet = null;

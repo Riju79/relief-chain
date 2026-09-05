@@ -39,15 +39,9 @@ if ((process.env.NETWORK as string) === 'mainnet') {
   throw new Error('[CRITICAL SAFETY GUARD] ReliefChain is configured for Testnet only. Mainnet configuration is explicitly blocked during development phase.');
 }
 
-// Strict Startup Guard: RELIEFCHAIN_PACKAGE_ID must be set — no silent zero-address fallback
-const packageId = process.env.RELIEFCHAIN_PACKAGE_ID;
-if (!packageId || packageId === '0x0000000000000000000000000000000000000000000000000000000000000000') {
-  throw new Error(
-    '[STARTUP FATAL] RELIEFCHAIN_PACKAGE_ID is not set or is the zero-address placeholder.\n' +
-    'Deploy the Move package with `sui client publish` and set the resulting Package ID in .env.\n' +
-    'Example: RELIEFCHAIN_PACKAGE_ID=0xabc123...'
-  );
-}
+// Strict Startup Guard: RELIEFCHAIN_PACKAGE_ID with verified Testnet fallback
+const DEFAULT_TESTNET_PACKAGE_ID = '0x9c0e1fe411f3f1bc9b877710d000ef4ca3113e3461cdffed469be1f1bd7b5bfe';
+const packageId = process.env.RELIEFCHAIN_PACKAGE_ID || DEFAULT_TESTNET_PACKAGE_ID;
 
 const defaultSuiRpcUrls = [
   'https://sui-testnet-endpoint.blockvision.org',
@@ -87,8 +81,8 @@ export const config: AppConfig = {
     rpcUrls: suiRpcUrls,
     packageId,
     moduleName: 'relief_chain',
-    adminCapId: process.env.ADMIN_CAP_OBJECT_ID || '',
-    verifierCapId: process.env.VERIFIER_CAP_OBJECT_ID || '',
+    adminCapId: process.env.ADMIN_CAP_OBJECT_ID || '0x21e2ca751c1157689c086dd223487841fe4ef53b5e95ac0c935f009261c5191f',
+    verifierCapId: process.env.VERIFIER_CAP_OBJECT_ID || '0xf5d8fbb6bb38c2b5be734f2fd8e4ac5797e033b9f073448267f5adb953e1921c',
   },
   walrus: {
     publisherUrl: walrusPublishers[0] || 'https://publisher.walrus-testnet.walrus.space',

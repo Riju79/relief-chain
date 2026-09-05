@@ -642,7 +642,7 @@
     const BACKEND_URL = window.RELIEFCHAIN_CONFIG?.backendUrl
       || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
         ? (window.location.port === '5173' ? 'http://localhost:3000' : '')
-        : 'https://relief-chain.onrender.com');
+        : window.location.origin);
 
     // Adjust back button path dynamically based on port
     if (window.location.port === '5173') {
