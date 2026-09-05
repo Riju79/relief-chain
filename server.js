@@ -5,10 +5,13 @@ import morgan from 'morgan';
 import fs from 'fs';
 import path from 'path';
 import axios from 'axios';
+import crypto from 'crypto';
 import rateLimit from 'express-rate-limit';
 import { fileURLToPath } from 'url';
 import { SuiGrpcClient } from '@mysten/sui/grpc';
 import { bcs } from '@mysten/sui/bcs';
+import suiClient from './src/config/suiClient.js';
+import walrusClient from './src/config/walrusClient.js';
 import { createNonce, verifyAndIssueToken, verifyJwt, requireRole } from './src/middleware/auth.js';
 import {
   getAllDbData,
@@ -276,9 +279,13 @@ function runAiAuthentication(fileName, fileBuffer, mimetype) {
     tags,
     authentic,
     authenticityScore,
+    triageScore: authenticityScore,
+    triageDescription: 'Automated triage score, pending human verifier review',
     authenticityFlags: flags
   };
 }
+
+const runAutomatedTriage = runAiAuthentication;
 
 const WALRUS_PUBLISHER = process.env.WALRUS_PUBLISHER || 'https://publisher.walrus-testnet.walrus.space';
 const WALRUS_AGGREGATOR = process.env.WALRUS_AGGREGATOR || 'https://aggregator.walrus-testnet.walrus.space';
@@ -338,58 +345,64 @@ app.get('/api/audit-logs', async (req, res) => {
   }
 });
 
-// POST /api/upload — upload file, return AI authenticity result
+// POST /api/upload — upload file to Walrus with failover, return SHA-256 hash & triage result
 app.post('/api/upload', uploadLimiter, upload.single('file'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ success: false, error: 'No file uploaded.' });
     const { originalname, buffer, mimetype } = req.file;
-    console.log(`[WALRUS] Connecting to publisher: ${WALRUS_PUBLISHER}`);
-    console.log(`[WALRUS] Storing: ${originalname} (${mimetype}), ${buffer.length} bytes`);
+
+    // Cryptographic SHA-256 content digest computation
+    const contentHash = crypto.createHash('sha256').update(buffer).digest('hex');
+    console.log(`[EVIDENCE INTEGRITY] File: "${originalname}" | SHA-256: ${contentHash}`);
 
     let blobId = null;
     let evidenceUrl = null;
     let isLocalFallback = false;
 
     try {
-      const response = await axios.put(`${WALRUS_PUBLISHER}/v1/blobs?epochs=5`, buffer, {
-        headers: { 'Content-Type': mimetype || 'application/octet-stream' },
-        timeout: 10000
-      });
-      console.log(`[WALRUS] Publisher response status: ${response.status}`);
-      if (response.data?.newlyCreated?.blobObject?.blobId) {
-        blobId = response.data.newlyCreated.blobObject.blobId;
-        console.log(`[WALRUS] Created new blob successfully. ID: ${blobId}`);
-      } else if (response.data?.alreadyCertified?.blobId) {
-        blobId = response.data.alreadyCertified.blobId;
-        console.log(`[WALRUS] Blob already certified. ID: ${blobId}`);
-      } else {
-        console.error('[WALRUS] Upload failed - response structure unrecognized:', JSON.stringify(response.data));
-      }
+      const uploadResult = await walrusClient.uploadBlob(buffer, mimetype || 'application/octet-stream', 5);
+      blobId = uploadResult.blobId;
+      evidenceUrl = `${WALRUS_AGGREGATOR}/v1/blobs/${blobId}`;
     } catch (walrusErr) {
-      console.error('[WALRUS UPLOAD FAILURE] Failed to store file on Walrus testnet:', {
-        message: walrusErr.message,
-        code: walrusErr.code,
-        response: walrusErr.response ? {
-          status: walrusErr.response.status,
-          data: walrusErr.response.data
-        } : 'No HTTP response'
-      });
-      
-      return res.status(500).json({
-        success: false,
-        error: 'Walrus decentralized storage network unavailable. Evidence must be stored on real Walrus nodes.'
-      });
+      console.warn('[WALRUS PUBLISHER WARNING] Network publishers unavailable. Caching file locally:', walrusErr.message);
+      blobId = `walrus_blob_${Date.now()}_${contentHash.slice(0, 8)}`;
+      evidenceUrl = `/api/evidence/raw/${blobId}`;
+      isLocalFallback = true;
     }
 
-    if (!blobId) throw new Error('Walrus did not return a valid blob ID.');
-    
-    evidenceUrl = `${WALRUS_AGGREGATOR}/v1/blobs/${blobId}`;
-    
+    // Persist file and metadata locally for fast serving and integrity verification
+    try {
+      const localFilePath = path.join(UPLOADS_DIR, blobId);
+      fs.writeFileSync(localFilePath, buffer);
+      fs.writeFileSync(`${localFilePath}.meta`, JSON.stringify({
+        originalname,
+        mimetype,
+        size: buffer.length,
+        contentHash,
+        uploadedAt: Date.now()
+      }, null, 2));
+    } catch (saveErr) {
+      console.warn('[CACHE WARNING] Failed to persist file locally:', saveErr.message);
+    }
+
     const aiAnalysis = runAiAuthentication(originalname, buffer, mimetype);
 
-    console.log(`[WALRUS] Blob: ${blobId} | Authentic: ${aiAnalysis.authentic} (${aiAnalysis.authenticityScore}%)`);
+    console.log(`[WALRUS] Blob: ${blobId} | SHA-256: ${contentHash} | Triage: ${aiAnalysis.triageScore}%`);
 
-    res.json({ success: true, blobId, evidenceUrl, fileName: originalname, fileSize: buffer.length, mimeType: mimetype, aiAnalysis });
+    res.json({
+      success: true,
+      blobId,
+      evidenceUrl,
+      contentHash,
+      fileName: originalname,
+      fileSize: buffer.length,
+      mimeType: mimetype,
+      isLocalFallback,
+      aiAnalysis: {
+        ...aiAnalysis,
+        contentHash
+      }
+    });
   } catch (error) {
     console.error('[UPLOAD ERROR]', error);
     res.status(500).json({ success: false, error: error.message || 'Server error uploading file.' });
@@ -464,13 +477,10 @@ app.post('/api/reports/:id/approve', verifyJwt, requireRole(['verifier', 'admin'
       });
     }
 
-    // Check on-chain Campaign.status via Sui RPC
-    const rpcUrl = process.env.SUI_RPC_URL || 'https://fullnode.testnet.sui.io:443';
-    const client = new SuiGrpcClient({ network: 'testnet', baseUrl: rpcUrl });
-
+    // Check on-chain Campaign.status via Failover Sui RPC
     let onChainObj;
     try {
-      onChainObj = await client.getObject({
+      onChainObj = await suiClient.getObject({
         objectId: campaignObjectId,
         include: { content: true }
       });
@@ -645,6 +655,60 @@ app.post('/api/relief-proof', async (req, res) => {
     res.json({ success: true, reliefProof: newProof });
   } catch (error) {
     res.status(500).json({ success: false, error: 'Failed to save proof log.' });
+  }
+});
+
+// POST /api/evidence/verify-integrity — backend double-check for SHA-256 integrity
+app.post('/api/evidence/verify-integrity', async (req, res) => {
+  try {
+    const { blobId, expectedHash, url } = req.body;
+    if (!expectedHash) {
+      return res.status(400).json({ success: false, error: 'expectedHash is required.' });
+    }
+
+    let fileBuffer = null;
+    // 1. Check local uploads cache first
+    if (blobId) {
+      const localPath = path.join(UPLOADS_DIR, blobId);
+      if (fs.existsSync(localPath)) {
+        fileBuffer = fs.readFileSync(localPath);
+      }
+    }
+
+    // 2. If not local, fetch from Walrus failover client or provided URL
+    if (!fileBuffer) {
+      if (blobId) {
+        try {
+          const fetchResult = await walrusClient.fetchBlob(blobId);
+          fileBuffer = fetchResult.data;
+        } catch (e) {
+          console.warn('[Integrity Check] Walrus fetch failed:', e.message);
+        }
+      } else if (url) {
+        const fetchRes = await axios.get(url, { responseType: 'arraybuffer', timeout: 8000 });
+        fileBuffer = Buffer.from(fetchRes.data);
+      }
+    }
+
+    if (!fileBuffer) {
+      return res.status(404).json({ success: false, error: 'Unable to retrieve file bytes for verification.' });
+    }
+
+    const computedHash = crypto.createHash('sha256').update(fileBuffer).digest('hex');
+    const match = computedHash.toLowerCase() === expectedHash.toLowerCase();
+
+    res.json({
+      success: true,
+      verified: match,
+      match,
+      expectedHash,
+      computedHash,
+      fileSize: fileBuffer.length,
+      status: match ? 'VERIFIED_MATCH' : 'CRYPTOGRAPHIC_INTEGRITY_VIOLATION'
+    });
+  } catch (err) {
+    console.error('[INTEGRITY CHECK ERROR]', err);
+    res.status(500).json({ success: false, error: err.message || 'Integrity check failed.' });
   }
 });
 

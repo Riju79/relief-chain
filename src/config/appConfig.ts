@@ -9,6 +9,7 @@ export interface AppConfig {
   sui: {
     network: 'testnet' | 'devnet' | 'localnet';
     rpcUrl: string;
+    rpcUrls: string[];
     packageId: string;
     moduleName: string;
     adminCapId: string;
@@ -16,7 +17,9 @@ export interface AppConfig {
   };
   walrus: {
     publisherUrl: string;
+    publisherUrls: string[];
     aggregatorUrl: string;
+    aggregatorUrls: string[];
   };
   indexer: {
     dbPath: string;
@@ -46,19 +49,53 @@ if (!packageId || packageId === '0x000000000000000000000000000000000000000000000
   );
 }
 
+const defaultSuiRpcUrls = [
+  process.env.SUI_RPC_URL || 'https://fullnode.testnet.sui.io:443',
+  'https://sui-testnet-endpoint.blockvision.org',
+  'https://testnet.sui.rpcpool.com',
+  'https://sui-testnet.public.blastapi.io'
+].filter(Boolean);
+
+const suiRpcUrls = process.env.SUI_RPC_URLS
+  ? process.env.SUI_RPC_URLS.split(',').map(u => u.trim()).filter(Boolean)
+  : defaultSuiRpcUrls;
+
+const defaultWalrusPublishers = [
+  process.env.WALRUS_PUBLISHER || 'https://publisher.walrus-testnet.walrus.space',
+  'https://walrus-testnet-publisher.nodes.guru',
+  'https://walrus-testnet.blockscope.net:11444'
+].filter(Boolean);
+
+const walrusPublishers = process.env.WALRUS_PUBLISHERS
+  ? process.env.WALRUS_PUBLISHERS.split(',').map(u => u.trim()).filter(Boolean)
+  : defaultWalrusPublishers;
+
+const defaultWalrusAggregators = [
+  process.env.WALRUS_AGGREGATOR || 'https://aggregator.walrus-testnet.walrus.space',
+  'https://walrus-testnet-aggregator.nodes.guru',
+  'https://walrus-testnet.blockscope.net:11445'
+].filter(Boolean);
+
+const walrusAggregators = process.env.WALRUS_AGGREGATORS
+  ? process.env.WALRUS_AGGREGATORS.split(',').map(u => u.trim()).filter(Boolean)
+  : defaultWalrusAggregators;
+
 export const config: AppConfig = {
   env,
   sui: {
     network: suiNetwork,
-    rpcUrl: process.env.SUI_RPC_URL || 'https://fullnode.testnet.sui.io:443',
+    rpcUrl: suiRpcUrls[0] || 'https://fullnode.testnet.sui.io:443',
+    rpcUrls: suiRpcUrls,
     packageId,
     moduleName: 'relief_chain',
     adminCapId: process.env.ADMIN_CAP_OBJECT_ID || '',
     verifierCapId: process.env.VERIFIER_CAP_OBJECT_ID || '',
   },
   walrus: {
-    publisherUrl: process.env.WALRUS_PUBLISHER || 'https://publisher.walrus-testnet.walrus.space',
-    aggregatorUrl: process.env.WALRUS_AGGREGATOR || 'https://aggregator.walrus-testnet.walrus.space'
+    publisherUrl: walrusPublishers[0] || 'https://publisher.walrus-testnet.walrus.space',
+    publisherUrls: walrusPublishers,
+    aggregatorUrl: walrusAggregators[0] || 'https://aggregator.walrus-testnet.walrus.space',
+    aggregatorUrls: walrusAggregators
   },
   indexer: {
     dbPath: process.env.INDEXER_DB_PATH || 'indexer_db.json',

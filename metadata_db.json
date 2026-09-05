@@ -1,6 +1,35 @@
 {
   "reports": [
     {
+      "id": "report-1788603936162",
+      "title": "Automated Test Flood Verification",
+      "location": "Assam, India",
+      "severity": "critical",
+      "desc": "Live verified report for end-to-end testing",
+      "evidenceBlobId": "walrus_blob_test_123",
+      "evidenceUrl": "/api/evidence/raw/walrus_blob_test_123",
+      "mimeType": "application/pdf",
+      "walletAddress": "0xb08cc125ff07d8df0b47eb8a59b8caf473de1b78000f736f8739bea0a1d2ecb3",
+      "timestamp": 1788603936162,
+      "status": "approved",
+      "aiAnalysis": {
+        "category": "Disaster Evidence",
+        "severity": "medium",
+        "confidence": 80,
+        "tags": [
+          "humanitarian"
+        ],
+        "authentic": false,
+        "authenticityScore": 0,
+        "authenticityFlags": [
+          "No evidence uploaded"
+        ]
+      },
+      "evidences": [],
+      "approvedAt": 1788603936399,
+      "onChainObjectId": "0xbc6d224b09671eb9806eacf818ea558e525443491b0729684d930ab595a78494"
+    },
+    {
       "id": "report-1788602996643",
       "title": "Automated Test Flood Verification",
       "location": "Assam, India",
@@ -906,6 +935,21 @@
     }
   ],
   "campaigns": [
+    {
+      "id": "report-1788603936162",
+      "title": "Automated Test Flood Verification",
+      "tag": "Rescue Mission",
+      "desc": "Live verified report for end-to-end testing...",
+      "raised": 0,
+      "goal": 25000,
+      "walletAddress": "0xbc6d224b09671eb9806eacf818ea558e525443491b0729684d930ab595a78494",
+      "onChainObjectId": "0xbc6d224b09671eb9806eacf818ea558e525443491b0729684d930ab595a78494",
+      "status": 1,
+      "budgetBlobId": "walrus_budget_report-1788603936162",
+      "budgetUrl": "https://aggregator.walrus.site/v1/blobs/walrus_budget_report-1788603936162",
+      "ngoCredentialsBlobId": "walrus_ngo_report-1788603936162",
+      "ngoCredentialsUrl": "https://aggregator.walrus.site/v1/blobs/walrus_ngo_report-1788603936162"
+    },
     {
       "id": "report-1788602996643",
       "title": "Automated Test Flood Verification",

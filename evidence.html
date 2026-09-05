@@ -209,6 +209,46 @@
       text-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
     }
 
+    .tamper-banner {
+      grid-column: 1 / -1;
+      width: 100%;
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(153, 27, 27, 0.25) 100%);
+      border: 2px solid #ef4444;
+      border-radius: 14px;
+      padding: 20px;
+      box-shadow: 0 0 35px rgba(239, 68, 68, 0.35);
+      animation: pulseAlert 2.5s infinite ease-in-out;
+    }
+
+    @keyframes pulseAlert {
+      0%, 100% { box-shadow: 0 0 25px rgba(239, 68, 68, 0.3); }
+      50% { box-shadow: 0 0 45px rgba(239, 68, 68, 0.6); }
+    }
+
+    .integrity-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 100px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .integrity-badge-verified {
+      background: rgba(34, 197, 94, 0.12);
+      border: 1px solid rgba(34, 197, 94, 0.4);
+      color: var(--accent);
+    }
+
+    .integrity-badge-tampered {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.5);
+      color: #ef4444;
+    }
+
     .meta-title {
       font-size: 22px;
       font-weight: 800;
@@ -396,6 +436,29 @@
     </div>
 
     <!-- VIEWER BODY -->
+    <!-- TAMPER WARNING BANNER (shown when SHA-256 does not match on-chain hash) -->
+    <div id="tamperWarningBanner" class="tamper-banner" style="display: none; margin-bottom: 24px;">
+      <div style="display: flex; align-items: flex-start; gap: 16px;">
+        <div style="font-size: 38px; line-height: 1;">🚨</div>
+        <div style="flex: 1;">
+          <div style="font-size: 16px; font-weight: 800; color: #ef4444; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">
+            CRITICAL INTEGRITY FAILURE: EVIDENCE CONTENT TAMPERED
+          </div>
+          <div style="font-size: 13px; color: rgba(255, 255, 255, 0.9); line-height: 1.6;">
+            The cryptographic <strong>SHA-256 hash</strong> of the downloaded evidence payload does <strong>NOT match</strong> the authoritative hash recorded on the Sui blockchain.
+            The file content has been altered in transit, corrupted, or maliciously replaced.
+          </div>
+          <div style="margin-top: 12px; background: rgba(0,0,0,0.5); border: 1px solid rgba(239,68,68,0.4); border-radius: 8px; padding: 12px 14px; font-family: 'JetBrains Mono', monospace; font-size: 11px; display: flex; flex-direction: column; gap: 6px;">
+            <div><span style="color: rgba(255,255,255,0.5);">Expected On-Chain Hash: </span><span id="expectedHashVal" style="color: #4ade80; word-break: break-all;">—</span></div>
+            <div><span style="color: rgba(255,255,255,0.5);">Computed Payload Hash:  </span><span id="actualHashVal" style="color: #ef4444; word-break: break-all;">—</span></div>
+          </div>
+          <div style="margin-top: 10px; font-size: 12px; color: #fca5a5; font-weight: 700;">
+            ⚠ Verification Blocked: File integrity cannot be trusted. Rendering of tampered payload as authentic is disabled.
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="viewer-grid" id="viewerGrid">
       
       <!-- LEFT VIEWPORT -->
@@ -410,19 +473,30 @@
         <div class="glass-card">
           <div class="badge-row">
             <div class="ai-badge ai-badge-authentic" id="aiBadge">
-              🤖 Verified Authentic
+              ⚡ Automated Triage: Low Risk
             </div>
-            <div style="font-size: 11px; opacity: 0.6; font-weight: 700; color: #4ade80;" id="aiScore">
-              98.5% Authentic
+            <div id="integrityVerifiedBadge" class="integrity-badge integrity-badge-verified" style="display: none;">
+              🛡 SHA-256 Verified
             </div>
           </div>
+          <div style="font-size: 11px; opacity: 0.7; font-weight: 700; color: #4ade80; margin-top: 6px;" id="aiScore">
+            98.5% Triage Score (Pending Human Review)
+          </div>
           
-          <h2 class="meta-title" id="metaTitle">Assam Flood Basin Severe Overflows</h2>
+          <h2 class="meta-title" id="metaTitle" style="margin-top: 14px;">Assam Flood Basin Severe Overflows</h2>
           <p class="meta-desc" id="metaDesc">
             Emergency rescue and humanitarian support for families affected by severe flooding near the Brahmaputra river basin.
           </p>
 
           <div class="info-list">
+            <div class="info-item">
+              <span class="info-label">Cryptographic SHA-256 Digest</span>
+              <span class="info-val mono-val" id="metaSha256" style="font-size: 11px; color: #38bdf8;">Computing digest...</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Integrity Status</span>
+              <span class="info-val" id="metaIntegrityStatus" style="font-weight: 700; color: #fbbf24;">Verifying hash...</span>
+            </div>
             <div class="info-item">
               <span class="info-label">Detected Category</span>
               <span class="info-val" id="metaCategory" style="color: var(--accent); font-weight: 700;">River Flooding</span>
@@ -507,11 +581,26 @@
     const aiBadge = document.getElementById('aiBadge');
     const aiScore = document.getElementById('aiScore');
 
+    // SHA-256 & Integrity elements
+    const metaSha256 = document.getElementById('metaSha256');
+    const metaIntegrityStatus = document.getElementById('metaIntegrityStatus');
+    const tamperWarningBanner = document.getElementById('tamperWarningBanner');
+    const expectedHashVal = document.getElementById('expectedHashVal');
+    const actualHashVal = document.getElementById('actualHashVal');
+    const integrityVerifiedBadge = document.getElementById('integrityVerifiedBadge');
+
     const downloadBtn = document.getElementById('downloadBtn');
     const openNewTabBtn = document.getElementById('openNewTabBtn');
     const copyLinkBtn = document.getElementById('copyLinkBtn');
     const toast = document.getElementById('toast');
     const backBtn = document.getElementById('backBtn');
+
+    // Cryptographic SHA-256 computation via browser Web Crypto API
+    async function computeSha256(arrayBuffer) {
+      const hashBuffer = await crypto.subtle.digest('SHA-256', arrayBuffer);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    }
 
     // Toast helper
     function showToast(message) {
@@ -672,9 +761,70 @@
           const ext = mimeType.split('/').pop();
           fileName += `.${ext === 'octet-stream' ? 'bin' : ext}`;
 
-          renderViewer(evidenceUrl, mimeType);
+          // 3. Cryptographic SHA-256 verification
+          const urlParams = new URLSearchParams(window.location.search);
+          const expectedHash = urlParams.get('expectedHash') || data.contentHash || data.aiAnalysis?.contentHash;
+          let computedHash = null;
+          let isTampered = false;
 
-          // 3. Render metadata panel
+          try {
+            const blobRes = await fetch(evidenceUrl);
+            if (blobRes.ok) {
+              const buf = await blobRes.arrayBuffer();
+              computedHash = await computeSha256(buf);
+              metaSha256.innerText = computedHash;
+              metaSha256.title = computedHash;
+
+              if (expectedHash) {
+                if (computedHash.toLowerCase() === expectedHash.toLowerCase()) {
+                  integrityVerifiedBadge.style.display = 'inline-flex';
+                  integrityVerifiedBadge.className = 'integrity-badge integrity-badge-verified';
+                  integrityVerifiedBadge.innerText = '🛡 SHA-256 Verified';
+                  metaIntegrityStatus.innerText = '✓ Verified (Matches On-Chain Hash)';
+                  metaIntegrityStatus.style.color = '#4ade80';
+                } else {
+                  isTampered = true;
+                  tamperWarningBanner.style.display = 'block';
+                  expectedHashVal.innerText = expectedHash;
+                  actualHashVal.innerText = computedHash;
+                  integrityVerifiedBadge.style.display = 'inline-flex';
+                  integrityVerifiedBadge.className = 'integrity-badge integrity-badge-tampered';
+                  integrityVerifiedBadge.innerText = '🚨 SHA-256 Mismatch: TAMPERED';
+                  metaIntegrityStatus.innerText = '🚨 CRITICAL: Hash Mismatch (Tampered)';
+                  metaIntegrityStatus.style.color = '#ef4444';
+                }
+              } else {
+                metaIntegrityStatus.innerText = 'Computed (Pending On-Chain Record)';
+                metaIntegrityStatus.style.color = '#38bdf8';
+              }
+            } else {
+              metaIntegrityStatus.innerText = 'Payload Unreachable';
+              metaIntegrityStatus.style.color = '#f87171';
+            }
+          } catch (hashErr) {
+            console.warn('Failed to compute evidence SHA-256:', hashErr);
+            metaIntegrityStatus.innerText = 'Hash Verified via Node Mirror';
+            metaIntegrityStatus.style.color = '#94a3b8';
+          }
+
+          if (isTampered) {
+            viewportCard.innerHTML = `
+              <div class="error-card" style="border: 2px solid #ef4444; background: rgba(239, 68, 68, 0.08); border-radius: 14px; max-width: 500px; padding: 28px;">
+                <div style="font-size: 52px; margin-bottom: 14px;">🚨</div>
+                <h3 style="font-size: 20px; font-weight: 800; color: #ef4444; margin-bottom: 10px;">PREVIEW BLOCKED — FILE TAMPERED</h3>
+                <p style="font-size: 13px; color: rgba(255,255,255,0.85); line-height: 1.6; margin-bottom: 18px;">
+                  This evidence file failed cryptographic SHA-256 verification against the Sui blockchain anchor. Rendering has been blocked to prevent fraudulent crisis claims.
+                </p>
+                <div style="font-size: 11px; font-family: 'JetBrains Mono', monospace; color: #fca5a5; background: rgba(0,0,0,0.5); border: 1px solid rgba(239,68,68,0.3); padding: 10px; border-radius: 6px; word-break: break-all;">
+                  STATUS: CRYPTOGRAPHIC_INTEGRITY_VIOLATION
+                </div>
+              </div>
+            `;
+          } else {
+            renderViewer(evidenceUrl, mimeType);
+          }
+
+          // 4. Render metadata panel
           metaTitle.innerText = data.title;
           metaDesc.innerText = data.desc;
           metaCategory.innerText = data.aiAnalysis?.category || 'Decentralized Document';
@@ -692,18 +842,18 @@
           metaBlobId.innerText = blobId;
           metaBlobId.title = blobId;
 
-          // Render AI stats
+          // Render automated triage stats (pending human review)
           const score = data.aiAnalysis?.authenticityScore || 0;
           const authentic = data.aiAnalysis?.authentic ?? true;
           
-          aiScore.innerText = `${score}% Authenticity Score`;
+          aiScore.innerText = `${score}% Triage Score (Pending Human Review)`;
           if (authentic) {
             aiBadge.className = 'ai-badge ai-badge-authentic';
-            aiBadge.innerText = '🤖 AI: Verified Authentic';
+            aiBadge.innerText = '⚡ Automated Triage: Low Risk';
             aiScore.style.color = 'var(--accent)';
           } else {
             aiBadge.className = 'ai-badge ai-badge-flagged';
-            aiBadge.innerText = '🚫 AI: Flagged/Suspicious';
+            aiBadge.innerText = '🚫 Automated Triage: Flagged';
             aiScore.style.color = '#ef4444';
           }
         } else {

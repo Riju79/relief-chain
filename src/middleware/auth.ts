@@ -5,9 +5,9 @@ import { verifyPersonalMessageSignature } from '@mysten/sui/verify';
 import { getDb } from '../db/client.js';
 import { nonces } from '../db/schema.js';
 import { eq, and, gt } from 'drizzle-orm';
+import suiClient from '../config/suiClient.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'reliefchain_dev_jwt_secret_key_2026_secure';
-const RPC_URL = process.env.SUI_RPC_URL || 'https://fullnode.testnet.sui.io:443';
 const PACKAGE_ID = process.env.RELIEFCHAIN_PACKAGE_ID || '0x9c0e1fe411f3f1bc9b877710d000ef4ca3113e3461cdffed469be1f1bd7b5bfe';
 
 export { JWT_SECRET };
@@ -124,9 +124,8 @@ export function requireRole(allowedRoles: ('verifier' | 'admin')[]) {
     const callerAddress = req.user.address;
 
     try {
-      // 2. Query Sui RPC for owned objects
-      const client = new SuiGrpcClient({ network: 'testnet', baseUrl: RPC_URL });
-      const owned = await client.listOwnedObjects({
+      // 2. Query Sui RPC for owned objects using failover client
+      const owned = await suiClient.listOwnedObjects({
         owner: callerAddress,
       });
 

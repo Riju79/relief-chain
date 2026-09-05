@@ -10,7 +10,7 @@
 - **Real Walrus Decentralized Storage:** Bulk disaster evidence (photos, video footage, vendor receipts, satellite imagery) is published directly to Walrus. Walrus Blob IDs and **SHA-256 content digests** are anchored on Sui.
 - **Capability-Based Governance:** Role-based permissions are enforced via Move capabilities (`AdminCap`, `VerifierCap`, `CampaignAdminCap`). Campaign creators cannot arbitrarily withdraw or drain funds.
 - **Milestone-Based Fund Release:** Direct payout releases to verified beneficiaries only after human auditor verification.
-- **Off-Chain AI Authenticity Engine:** Multimodal diagnostic tool that calculates 0–100% authenticity scores and flags suspicious files for human auditors. *AI system has zero financial capability or Move transaction signing access.*
+- **Off-Chain Automated Triage Engine:** Heuristic diagnostic tool that calculates a 0–100% triage priority score (entropy, filename, and format heuristics) to flag suspicious files for human auditors. *Automated triage has zero financial capability or Move transaction signing access; all approvals require human verifiers.*
 - **Fault-Tolerant Sui Event Indexer:** Idempotent event processing layer with on-chain Sui RPC reconciliation.
 
 ---
@@ -33,12 +33,12 @@ ReliefChain introduces a transparent, multi-tiered verification pipeline:
 [ Disaster Reporter / NGO ]
            │
            ▼ Uploads Evidence
- [ Real Walrus Storage ] ──▶ Returns Blob ID
+ [ Real Walrus Storage ] ──▶ Returns Blob ID & SHA-256 Digest
            │
            ▼ Runs Off-Chain Diagnostics
-[ AI Authenticity Engine ] ──▶ Evaluates Media Authenticity (0-100%)
+[ Automated Triage Engine ] ──▶ Computes Heuristic Triage Score (0-100%, Pending Review)
            │
-           ▼ Reviews Evidence & Telemetry
+           ▼ Reviews Evidence & SHA-256 Digest
  [ Human Verifier Board ] ──▶ Signs Sui Transaction (VerifierCap)
            │
            ▼ Emits CampaignVerified / MilestoneApproved
@@ -86,14 +86,15 @@ Located in [`move/sources/relief_chain.move`](move/sources/relief_chain.move):
 
 ---
 
-## 🤖 Role of the AI Authenticity Engine
+## ⚡ Role of the Automated Triage Engine (Heuristic Screening)
 
-The AI system (`runAiAuthentication` in backend / client) acts strictly as an **off-chain diagnostic advisor**:
-- **Media Classification:** Categorizes evidence (Flash Flooding, Cyclone, Wildfire, Landslide, Earthquake).
-- **Entropy & Integrity Check:** Analyzes byte entropy and checks for placeholder files or suspicious filenames.
-- **Risk Assessment:** Generates a 0–100% authenticity score.
+The automated triage engine (`runAutomatedTriage` / `runAiAuthentication` in backend / client) acts strictly as an **off-chain heuristic screening advisor**:
+- **Media Classification:** Categorizes evidence based on filename heuristics and metadata (Flash Flooding, Cyclone, Wildfire, Landslide, Earthquake).
+- **Entropy & Integrity Check:** Analyzes byte entropy and checks for placeholder files, suspicious filenames, or tiny dummy payloads.
+- **Triage Priority Score:** Generates a 0–100% automated triage score to prioritize queues for human verifiers. It is an automated screening heuristic, not a trained autonomous decision-maker.
+- **Pending Human Verification:** Every report remains unapproved until an authorized human verifier holding an on-chain `VerifierCap` inspects the evidence, re-verifies the cryptographic SHA-256 hash, and signs a transaction on Sui.
 
-> ⚠️ **Strict Security Rule:** The AI system holds **no Move capabilities**, cannot sign transactions, and **cannot release treasury funds**.
+> ⚠️ **Strict Security Rule:** The triage engine holds **zero Move capabilities**, cannot sign transactions, and **cannot release treasury funds**. Final verification is exclusively performed on-chain by human auditors holding `VerifierCap`.
 
 ---
 

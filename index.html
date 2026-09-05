@@ -3860,12 +3860,13 @@
           const data = await response.json();
 
           if (data.success) {
-            updateUploadProgress(100, `Stored "${file.name}" ✓ — Running AI Authenticator...`);
+            updateUploadProgress(100, `Stored "${file.name}" ✓ — Running Automated Triage Screening...`);
             await sleep(400);
 
             uploadedEvidences.push({
               blobId: data.blobId,
               evidenceUrl: data.evidenceUrl,
+              contentHash: data.contentHash || '',
               fileName: file.name,
               fileSize: file.size,
               mimeType: file.type || data.mimeType || 'application/octet-stream',
@@ -3938,8 +3939,8 @@
           verdictHtml = `
             <div style="background:rgba(0,0,0,0.25); padding:8px 12px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; font-size:11px;">
               <div>
-                <span style="color:var(--text-muted);">AI Verdict: </span>
-                <span style="color:${statusColor}; font-weight:700;">🤖 Authentic — ${ev.aiAnalysis.category}</span>
+                <span style="color:var(--text-muted);">Automated Triage: </span>
+                <span style="color:${statusColor}; font-weight:700;">⚡ Low Risk — ${ev.aiAnalysis.category} (Pending Human Review)</span>
               </div>
               <div style="font-weight:900; color:${statusColor}; font-family:monospace;">${score}%</div>
             </div>
@@ -4429,7 +4430,7 @@
               <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
                 <span class="admin-badge badge-${report.severity}">${report.severity}</span>
                 <span style="font-weight:700; font-size:13px;">${report.title}</span>
-                <span style="font-size:10px; font-weight:800; padding:2px 8px; border-radius:100px; background:rgba(0,0,0,0.3); border:1px solid ${scoreColor}40; color:${scoreColor};">🤖 Auth: ${score}%</span>
+                <span style="font-size:10px; font-weight:800; padding:2px 8px; border-radius:100px; background:rgba(0,0,0,0.3); border:1px solid ${scoreColor}40; color:${scoreColor};">⚡ Triage: ${score}% (Pending Review)</span>
               </div>
               <div style="font-size:10px; opacity:0.5; margin-top:4px;">Location: ${report.location} — Reporter: ${(report.walletAddress || '').substring(0, 8)}...</div>
               <div style="font-size:10px; color:var(--text-muted); margin-top:2px;">Category: ${report.aiAnalysis?.category || 'Unknown'}</div>

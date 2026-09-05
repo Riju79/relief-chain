@@ -1,7 +1,22 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { bcs } from '@mysten/sui/bcs';
 import suiClient from '../config/suiClient.js';
+
+const CampaignBcs = bcs.struct('Campaign', {
+  id: bcs.Address,
+  title: bcs.string(),
+  description: bcs.string(),
+  location: bcs.string(),
+  severity: bcs.u8(),
+  goal: bcs.u64(),
+  funds_raised: bcs.u64(),
+  total_released: bcs.u64(),
+  treasury: bcs.u64(),
+  creator: bcs.Address,
+  status: bcs.u8(),
+});
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -246,8 +261,9 @@ export class SuiEventIndexer {
         console.warn(`[Indexer] Unhandled event type: ${type}`);
     }
 
-    // Mark event ID as processed
+    // Mark event ID as processed & advance cursor
     this.processedEventIds.add(eventId);
+    this.lastCursor = eventId;
     this.saveState();
     return true;
   }
@@ -262,13 +278,21 @@ export class SuiEventIndexer {
     console.log(`[Reconciler] Reconciling indexed projection for ${campaignId} against Sui RPC...`);
     try {
       const obj = await suiClient.getObject({
-        id: campaignId,
-        options: { showContent: true }
+        objectId: campaignId,
+        include: { content: true }
       });
 
-      if (obj.data && obj.data.content && 'fields' in obj.data.content) {
-        const fields = (obj.data.content as any).fields;
-        
+      let fields: any = null;
+      const rawContent = (obj as any)?.object?.content;
+      if (rawContent) {
+        const raw = rawContent as any;
+        const bytes = raw instanceof Uint8Array ? raw : new Uint8Array(Object.values(raw));
+        fields = CampaignBcs.parse(bytes);
+      } else if ((obj as any)?.object?.json?.fields) {
+        fields = (obj as any).object.json.fields;
+      }
+
+      if (fields) {
         const onChainProjection: CampaignProjection = {
           campaignId,
           title: fields.title || '',
@@ -287,13 +311,30 @@ export class SuiEventIndexer {
         // Overwrite projection with authoritative on-chain state
         this.projections.set(campaignId, onChainProjection);
         this.saveState();
-        console.log(`[Reconciler SUCCESS] Reconciled ${campaignId} with on-chain Sui truth.`);
+        console.log(`[Reconciler SUCCESS] Reconciled ${campaignId} with on-chain Sui truth: status=${onChainProjection.status}, fundsRaised=${onChainProjection.fundsRaised}`);
         return onChainProjection;
       }
     } catch (e: any) {
       console.warn(`[Reconciler Warning] Could not fetch object ${campaignId} from Sui RPC: ${e.message}`);
     }
     return this.projections.get(campaignId) || null;
+  }
+
+  /**
+   * Periodically reconcile all active campaign projections against authoritative Sui RPC state.
+   */
+  public async reconcileAllProjections(): Promise<CampaignProjection[]> {
+    console.log(`[Reconciler Periodic] Reconciling all ${this.projections.size} active campaign projections...`);
+    const results: CampaignProjection[] = [];
+    for (const campaignId of Array.from(this.projections.keys())) {
+      const reconciled = await this.reconcileWithSui(campaignId);
+      if (reconciled) results.push(reconciled);
+    }
+    return results;
+  }
+
+  public getLastCursor(): string | null {
+    return this.lastCursor;
   }
 
   public getProjection(campaignId: string): CampaignProjection | undefined {
