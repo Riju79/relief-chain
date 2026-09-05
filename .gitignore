@@ -25,6 +25,7 @@ build/
 uploads/
 indexer_db.json
 test_indexer_db.json
+.pgdata/
 
 # IDE / OS files
 .DS_Store

@@ -5,7 +5,20 @@ import morgan from 'morgan';
 import fs from 'fs';
 import path from 'path';
 import axios from 'axios';
+import rateLimit from 'express-rate-limit';
 import { fileURLToPath } from 'url';
+import { SuiGrpcClient } from '@mysten/sui/grpc';
+import { bcs } from '@mysten/sui/bcs';
+import { createNonce, verifyAndIssueToken, verifyJwt, requireRole } from './src/middleware/auth.js';
+import {
+  getAllDbData,
+  insertReport,
+  approveReportTransaction,
+  rejectReportTransaction,
+  insertReliefProof,
+  getAuditLogs
+} from './src/db/queries.js';
+import { getDb } from './src/db/client.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -13,9 +26,43 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+const CampaignBcs = bcs.struct('Campaign', {
+  id: bcs.Address,
+  title: bcs.string(),
+  description: bcs.string(),
+  location: bcs.string(),
+  severity: bcs.u8(),
+  goal: bcs.u64(),
+  funds_raised: bcs.u64(),
+  total_released: bcs.u64(),
+  treasury: bcs.u64(),
+  creator: bcs.Address,
+  status: bcs.u8(),
+});
+
 app.use(cors());
 app.use(express.json());
 app.use(morgan('dev'));
+
+// Initialize PostgreSQL database connection and tables
+getDb().catch(err => console.error('[ReliefChain DB Error]:', err));
+
+// ── Rate limiters ─────────────────────────────────────────────────
+const authNonceLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 30, // 30 requests per window
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'Too many authentication nonce requests. Please try again later.' }
+});
+
+const uploadLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20, // 20 uploads per window
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'Too many upload requests. Please try again later.' }
+});
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -241,8 +288,58 @@ if (!fs.existsSync(UPLOADS_DIR)) {
   fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 }
 
+// ── SIWE-Style Sui Wallet Authentication Routes ───────────────────
+app.get('/api/auth/nonce', authNonceLimiter, async (req, res) => {
+  try {
+    const { address } = req.query;
+    const { nonce, message, expiresAt } = await createNonce(address ? String(address) : undefined);
+    res.json({ success: true, nonce, message, expiresAt });
+  } catch (err) {
+    console.error('[AUTH NONCE ERROR]', err);
+    res.status(500).json({ success: false, error: 'Failed to generate authentication nonce.' });
+  }
+});
+
+app.post('/api/auth/nonce', authNonceLimiter, async (req, res) => {
+  try {
+    const { address } = req.body;
+    const { nonce, message, expiresAt } = await createNonce(address);
+    res.json({ success: true, nonce, message, expiresAt });
+  } catch (err) {
+    console.error('[AUTH NONCE ERROR]', err);
+    res.status(500).json({ success: false, error: 'Failed to generate authentication nonce.' });
+  }
+});
+
+app.post('/api/auth/verify', async (req, res) => {
+  try {
+    const { address, signature, nonce } = req.body;
+    if (!address || !signature || !nonce) {
+      return res.status(400).json({ success: false, error: 'address, signature, and nonce are required.' });
+    }
+
+    const result = await verifyAndIssueToken(address, signature, nonce);
+    res.json({ success: true, token: result.token, address: result.address });
+  } catch (err) {
+    console.error('[AUTH VERIFY ERROR]', err);
+    res.status(401).json({ success: false, error: err.message || 'Authentication verification failed.' });
+  }
+});
+
+// GET /api/audit-logs — retrieve audit trail from PostgreSQL
+app.get('/api/audit-logs', async (req, res) => {
+  try {
+    const limit = Math.min(Number(req.query.limit || 50), 200);
+    const logs = await getAuditLogs(limit);
+    res.json({ success: true, count: logs.length, auditLogs: logs });
+  } catch (err) {
+    console.error('[AUDIT LOGS ERROR]', err);
+    res.status(500).json({ success: false, error: 'Failed to retrieve audit logs.' });
+  }
+});
+
 // POST /api/upload — upload file, return AI authenticity result
-app.post('/api/upload', upload.single('file'), async (req, res) => {
+app.post('/api/upload', uploadLimiter, upload.single('file'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ success: false, error: 'No file uploaded.' });
     const { originalname, buffer, mimetype } = req.file;
@@ -313,7 +410,7 @@ app.get('/api/reports', (req, res) => {
 });
 
 // POST /api/reports — create new report with status:pending
-app.post('/api/reports', (req, res) => {
+app.post('/api/reports', async (req, res) => {
   try {
     const { title, location, severity, desc, evidenceBlobId, evidenceUrl, walletAddress, aiAnalysis, mimeType, evidences } = req.body;
     if (!title || !location || !desc) return res.status(400).json({ success: false, error: 'Missing required fields.' });
@@ -334,6 +431,13 @@ app.post('/api/reports', (req, res) => {
       evidences: evidences || []
     };
 
+    // Save to PostgreSQL
+    try {
+      await insertReport(newReport);
+    } catch (pgErr) {
+      console.warn('[DB NOTICE] Failed to insert report to PostgreSQL:', pgErr.message);
+    }
+
     db.reports.unshift(newReport);
     writeDb(db);
     res.json({ success: true, report: newReport });
@@ -343,17 +447,89 @@ app.post('/api/reports', (req, res) => {
   }
 });
 
-// POST /api/reports/:id/approve — admin approves → creates campaign
-app.post('/api/reports/:id/approve', (req, res) => {
+// POST /api/reports/:id/approve — verifier/admin approves (Requires on-chain STATUS_VERIFIED check)
+app.post('/api/reports/:id/approve', verifyJwt, requireRole(['verifier', 'admin']), async (req, res) => {
   try {
     const db = readDb();
     const report = db.reports.find(r => r.id === req.params.id);
     if (!report) return res.status(404).json({ success: false, error: 'Report not found.' });
 
+    // Identify the on-chain Campaign object ID
+    const campaignObjectId = req.body?.campaignObjectId || report.onChainObjectId || report.walletAddress;
+
+    if (!campaignObjectId || !campaignObjectId.startsWith('0x') || campaignObjectId.length !== 66) {
+      return res.status(400).json({
+        success: false,
+        error: 'A valid on-chain Campaign object ID (66-character hex) is required to approve this report. Deploy the campaign on Sui first.',
+      });
+    }
+
+    // Check on-chain Campaign.status via Sui RPC
+    const rpcUrl = process.env.SUI_RPC_URL || 'https://fullnode.testnet.sui.io:443';
+    const client = new SuiGrpcClient({ network: 'testnet', baseUrl: rpcUrl });
+
+    let onChainObj;
+    try {
+      onChainObj = await client.getObject({
+        objectId: campaignObjectId,
+        include: { content: true }
+      });
+    } catch (rpcErr) {
+      return res.status(502).json({
+        success: false,
+        error: `Failed to query Sui RPC for campaign object ${campaignObjectId}: ${rpcErr.message}`,
+      });
+    }
+
+    if (!onChainObj?.object) {
+      return res.status(404).json({
+        success: false,
+        error: `Campaign object "${campaignObjectId}" does not exist on Sui testnet.`,
+      });
+    }
+
+    // Inspect status: STATUS_SUBMITTED = 0, STATUS_VERIFIED = 1, STATUS_FUNDED = 2
+    let onChainStatus = 0;
+    try {
+      if (onChainObj.object?.content) {
+        const raw = onChainObj.object.content;
+        const bytes = raw instanceof Uint8Array ? raw : new Uint8Array(Object.values(raw));
+        const parsed = CampaignBcs.parse(bytes);
+        onChainStatus = Number(parsed.status ?? 0);
+      } else if (onChainObj.object?.json?.fields) {
+        onChainStatus = Number(onChainObj.object.json.fields.status ?? 0);
+      }
+    } catch (parseErr) {
+      console.warn('[RPC WARNING] Failed to parse Campaign BCS:', parseErr.message);
+    }
+
+    if (onChainStatus === 0) { // STATUS_SUBMITTED
+      return res.status(400).json({
+        success: false,
+        error: 'On-chain Campaign status is still STATUS_SUBMITTED (0). You must submit a verify_campaign transaction on Sui with your VerifierCap before marking the report approved.',
+        campaignObjectId,
+        onChainStatus: 0,
+      });
+    }
+
+    // Execute atomic PostgreSQL transaction and audit log
+    let txResult;
+    try {
+      txResult = await approveReportTransaction(
+        req.params.id,
+        req.user.address,
+        campaignObjectId,
+        onChainStatus
+      );
+    } catch (dbErr) {
+      console.warn('[DB TRANSACTION NOTICE]:', dbErr.message);
+    }
+
+    // Keep memory / metadata_db in sync for any sync consumers
     report.status = 'approved';
     report.approvedAt = Date.now();
+    report.onChainObjectId = campaignObjectId;
 
-    // Auto-create campaign for the approved report
     const existing = db.campaigns.find(c => c.id === report.id);
     if (!existing) {
       db.campaigns.unshift({
@@ -363,36 +539,64 @@ app.post('/api/reports/:id/approve', (req, res) => {
         desc: report.desc.substring(0, 120) + '...',
         raised: 0,
         goal: report.severity === 'critical' ? 25000 : 10000,
-        walletAddress: report.walletAddress || '0x5313936ab87ed60dc8a11a1a1a1a1a1a1a1a1a1a100000000000000000000000',
+        walletAddress: campaignObjectId,
+        onChainObjectId: campaignObjectId,
+        status: onChainStatus,
         budgetBlobId: `walrus_budget_${report.id}`,
         budgetUrl: `https://aggregator.walrus.site/v1/blobs/walrus_budget_${report.id}`,
         ngoCredentialsBlobId: `walrus_ngo_${report.id}`,
         ngoCredentialsUrl: `https://aggregator.walrus.site/v1/blobs/walrus_ngo_${report.id}`
       });
+    } else {
+      existing.onChainObjectId = campaignObjectId;
+      existing.status = onChainStatus;
     }
 
     writeDb(db);
-    res.json({ success: true, report, campaign: db.campaigns.find(c => c.id === report.id) });
+
+    console.log(`[APPROVE SUCCESS] Report ${req.params.id} approved by ${req.user.address} (Campaign ${campaignObjectId} verified on-chain)`);
+    res.json({
+      success: true,
+      report,
+      campaign: db.campaigns.find(c => c.id === report.id),
+      audit: {
+        actor: req.user.address,
+        role: req.user.role,
+        campaignObjectId,
+        onChainStatus,
+      }
+    });
   } catch (error) {
     console.error('[APPROVE ERROR]', error);
-    res.status(500).json({ success: false, error: 'Failed to approve report.' });
+    res.status(500).json({ success: false, error: error.message || 'Failed to approve report.' });
   }
 });
 
-// POST /api/reports/:id/reject — admin rejects report
-app.post('/api/reports/:id/reject', (req, res) => {
+// POST /api/reports/:id/reject — verifier/admin rejects report
+app.post('/api/reports/:id/reject', verifyJwt, requireRole(['verifier', 'admin']), async (req, res) => {
   try {
     const db = readDb();
     const report = db.reports.find(r => r.id === req.params.id);
     if (!report) return res.status(404).json({ success: false, error: 'Report not found.' });
 
+    const reason = req.body?.reason || 'Failed authenticity review';
+
+    try {
+      await rejectReportTransaction(req.params.id, req.user.address, reason);
+    } catch (dbErr) {
+      console.warn('[DB TRANSACTION NOTICE]:', dbErr.message);
+    }
+
     report.status = 'rejected';
     report.rejectedAt = Date.now();
-    report.rejectionReason = req.body.reason || 'Failed authenticity review';
+    report.rejectionReason = reason;
     writeDb(db);
+
+    console.log(`[REJECT SUCCESS] Report ${req.params.id} rejected by ${req.user.address} (Reason: ${reason})`);
     res.json({ success: true, report });
   } catch (error) {
-    res.status(500).json({ success: false, error: 'Failed to reject report.' });
+    console.error('[REJECT ERROR]', error);
+    res.status(500).json({ success: false, error: error.message || 'Failed to reject report.' });
   }
 });
 
@@ -417,7 +621,7 @@ app.get('/api/relief-proof', (req, res) => {
 });
 
 // POST /api/relief-proof
-app.post('/api/relief-proof', (req, res) => {
+app.post('/api/relief-proof', async (req, res) => {
   try {
     const { campaignId, title, desc, proofBlobId, proofUrl, coordinates } = req.body;
     if (!title || !desc || !proofBlobId) return res.status(400).json({ success: false, error: 'Missing relief proof fields.' });
@@ -429,6 +633,13 @@ app.post('/api/relief-proof', (req, res) => {
       timestamp: Date.now(),
       coordinates: coordinates || '22.18° N, 88.85° E'
     };
+
+    try {
+      await insertReliefProof(newProof, req.headers.authorization ? 'authenticated_verifier' : undefined);
+    } catch (pgErr) {
+      console.warn('[DB NOTICE] Failed to insert relief-proof to PostgreSQL:', pgErr.message);
+    }
+
     db.reliefProof.unshift(newProof);
     writeDb(db);
     res.json({ success: true, reliefProof: newProof });
