@@ -298,6 +298,109 @@ export function isValidSuiAddress(address) {
   return /^[0-9a-fA-F]{64}$/.test(hexPart);
 }
 
+// ── Wallet Personal Message Signing (SIWE-Style) ──────────────────
+/**
+ * Signs an arbitrary message using the connected wallet adapter.
+ * Supports standard 'sui:signPersonalMessage' and 'sui:signMessage'.
+ *
+ * @param {object} wallet - Connected wallet object
+ * @param {string} senderAddress - Signer's Sui address
+ * @param {string} messageText - Challenge message to sign
+ * @returns {Promise<string>} Base64 signature
+ */
+export async function signPersonalMessage(wallet, senderAddress, messageText) {
+  if (!wallet?.suiWalletObject) {
+    throw new Error('Wallet is not connected. Please reconnect your wallet.');
+  }
+
+  const walletObj = wallet.suiWalletObject;
+  const features = walletObj.features || {};
+  const activeAccount =
+    walletObj.accounts?.find(a => a.address === senderAddress) ??
+    walletObj.accounts?.[0] ?? null;
+
+  const msgBytes = new TextEncoder().encode(messageText);
+
+  // 1. Standard wallet feature 'sui:signPersonalMessage'
+  if (features['sui:signPersonalMessage']) {
+    console.log('[ReliefChain Auth] Signing challenge via sui:signPersonalMessage...');
+    const res = await features['sui:signPersonalMessage'].signPersonalMessage({
+      account: activeAccount,
+      message: msgBytes
+    });
+    return res.signature;
+  }
+
+  // 2. Standard wallet feature 'sui:signMessage'
+  if (features['sui:signMessage']) {
+    console.log('[ReliefChain Auth] Signing challenge via sui:signMessage...');
+    const res = await features['sui:signMessage'].signMessage({
+      account: activeAccount,
+      message: msgBytes
+    });
+    return res.signature;
+  }
+
+  // 3. Legacy provider fallback
+  if (typeof walletObj.signPersonalMessage === 'function') {
+    console.log('[ReliefChain Auth] Signing challenge via legacy signPersonalMessage...');
+    const res = await walletObj.signPersonalMessage({ message: msgBytes });
+    return res.signature || res;
+  }
+
+  if (typeof walletObj.signMessage === 'function') {
+    console.log('[ReliefChain Auth] Signing challenge via legacy signMessage...');
+    const res = await walletObj.signMessage({ message: msgBytes });
+    return res.signature || res;
+  }
+
+  throw new Error(`Connected wallet (${wallet.name}) does not support cryptographic message signing.`);
+}
+
+// ── On-Chain Capabilities Checker ─────────────────────────────────
+/**
+ * Queries Sui RPC for owned objects of type AdminCap or VerifierCap.
+ * Returns { hasAdminCap, hasVerifierCap, role, verifierCapId, adminCapId }
+ */
+export async function checkUserCapabilities(address) {
+  if (!address || !isValidSuiAddress(address)) {
+    return { hasAdminCap: false, hasVerifierCap: false, role: 'none', verifierCapId: null, adminCapId: null };
+  }
+
+  const pkgId = getPackageId();
+  const verifierCapType = `${pkgId}::relief_chain::VerifierCap`;
+  const adminCapType = `${pkgId}::relief_chain::AdminCap`;
+
+  try {
+    const res = await sendRpcRequest('suix_getOwnedObjects', [
+      address,
+      { filter: { MatchAny: [{ StructType: verifierCapType }, { StructType: adminCapType }] }, options: { showType: true } }
+    ]);
+
+    const objects = res?.data || [];
+    let verifierCapId = null;
+    let adminCapId = null;
+
+    for (const item of objects) {
+      const type = item?.data?.type || '';
+      if (type.includes(adminCapType) && !adminCapId) {
+        adminCapId = item.data.objectId;
+      }
+      if (type.includes(verifierCapType) && !verifierCapId) {
+        verifierCapId = item.data.objectId;
+      }
+    }
+
+    const hasAdminCap = !!adminCapId;
+    const hasVerifierCap = !!verifierCapId;
+    const role = hasAdminCap ? 'admin' : (hasVerifierCap ? 'verifier' : 'none');
+
+    return { hasAdminCap, hasVerifierCap, role, verifierCapId, adminCapId };
+  } catch (err) {
+    console.warn('[ReliefChain] Failed to query on-chain capabilities directly:', err.message);
+    return { hasAdminCap: false, hasVerifierCap: false, role: 'none', verifierCapId: null, adminCapId: null };
+  }
+}
 
 // ════════════════════════════════════════════════════════════════════
 // UNIFIED SIGNING + EXECUTION ENGINE

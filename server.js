@@ -542,6 +542,8 @@ app.post('/api/reports/:id/approve', verifyJwt, requireRole(['verifier', 'admin'
 
     const existing = db.campaigns.find(c => c.id === report.id);
     if (!existing) {
+      const primaryBlob = report.evidenceBlobId || (report.evidences && report.evidences[0]?.blobId) || '';
+      const primaryUrl = report.evidenceUrl || (report.evidences && report.evidences[0]?.evidenceUrl) || '';
       db.campaigns.unshift({
         id: report.id,
         title: report.title,
@@ -552,6 +554,11 @@ app.post('/api/reports/:id/approve', verifyJwt, requireRole(['verifier', 'admin'
         walletAddress: campaignObjectId,
         onChainObjectId: campaignObjectId,
         status: onChainStatus,
+        evidenceBlobId: primaryBlob,
+        evidenceUrl: primaryUrl,
+        imageUrl: primaryBlob ? `/api/evidence/raw/${primaryBlob}` : primaryUrl,
+        mimeType: report.mimeType || 'image/jpeg',
+        evidences: report.evidences || [],
         budgetBlobId: `walrus_budget_${report.id}`,
         budgetUrl: `https://aggregator.walrus.site/v1/blobs/walrus_budget_${report.id}`,
         ngoCredentialsBlobId: `walrus_ngo_${report.id}`,
@@ -560,6 +567,10 @@ app.post('/api/reports/:id/approve', verifyJwt, requireRole(['verifier', 'admin'
     } else {
       existing.onChainObjectId = campaignObjectId;
       existing.status = onChainStatus;
+      if (report.evidenceBlobId && !existing.evidenceBlobId) {
+        existing.evidenceBlobId = report.evidenceBlobId;
+        existing.imageUrl = `/api/evidence/raw/${report.evidenceBlobId}`;
+      }
     }
 
     writeDb(db);
@@ -617,6 +628,90 @@ app.get('/api/campaigns', (req, res) => {
     res.json({ success: true, campaigns: db.campaigns });
   } catch (error) {
     res.status(500).json({ success: false, error: 'Failed to fetch campaigns.' });
+  }
+});
+
+// GET /api/donations — fetch real donation records & stats
+app.get('/api/donations', (req, res) => {
+  try {
+    const db = readDb();
+    const allDonations = db.donations || [];
+    const { donor, campaignId } = req.query;
+
+    let filtered = allDonations;
+    if (donor) {
+      filtered = allDonations.filter(d => d.donorAddress && d.donorAddress.toLowerCase() === donor.toLowerCase());
+    }
+    if (campaignId) {
+      filtered = filtered.filter(d => d.campaignId === campaignId);
+    }
+
+    const calcStats = (list) => {
+      const totalSui = list
+        .filter(d => (d.token || 'SUI').toUpperCase() === 'SUI')
+        .reduce((acc, d) => acc + (parseFloat(d.amount) || 0), 0);
+      const totalUsdc = list
+        .filter(d => (d.token || '').toUpperCase() === 'USDC')
+        .reduce((acc, d) => acc + (parseFloat(d.amount) || 0), 0);
+      const campaignsBacked = new Set(list.map(d => d.campaignId)).size;
+      const livesImpacted = Math.max(Math.floor(totalSui / 25), list.length > 0 ? 1 : 0);
+      return { totalSui, totalUsdc, campaignsBacked, livesImpacted, count: list.length };
+    };
+
+    res.json({
+      success: true,
+      donations: filtered,
+      allDonations: allDonations,
+      userStats: calcStats(filtered),
+      globalStats: calcStats(allDonations),
+      totalCount: filtered.length
+    });
+  } catch (error) {
+    console.error('[DONATIONS FETCH ERROR]', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch donations.' });
+  }
+});
+
+// POST /api/donations — record real on-chain/gateway donation persistently
+app.post('/api/donations', async (req, res) => {
+  try {
+    const { campaignId, campaignTitle, donorAddress, amount, token, txHash, timestamp } = req.body;
+    if (!campaignId || !amount) {
+      return res.status(400).json({ success: false, error: 'Missing donation details.' });
+    }
+
+    const db = readDb();
+    if (!db.donations) db.donations = [];
+
+    const numAmount = parseFloat(amount) || 0;
+    const cleanToken = (token || 'SUI').toUpperCase();
+
+    const newDonation = {
+      id: `don-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      campaignId,
+      campaignTitle: campaignTitle || 'Relief Campaign',
+      donorAddress: donorAddress || '0x...',
+      amount: numAmount,
+      token: cleanToken,
+      txHash: txHash || `0x${Date.now().toString(16)}`,
+      timestamp: timestamp || Date.now()
+    };
+
+    db.donations.unshift(newDonation);
+
+    // Update campaign raised total in metadata_db.json
+    const camp = db.campaigns.find(c => c.id === campaignId || c.onChainObjectId === campaignId);
+    if (camp) {
+      camp.raised = (parseFloat(camp.raised) || 0) + numAmount;
+    }
+
+    writeDb(db);
+    console.log(`[DONATION RECORDED] ${numAmount} ${cleanToken} to "${newDonation.campaignTitle}" by ${donorAddress} (tx: ${newDonation.txHash})`);
+
+    res.json({ success: true, donation: newDonation });
+  } catch (error) {
+    console.error('[DONATION SAVE ERROR]', error);
+    res.status(500).json({ success: false, error: 'Failed to record donation.' });
   }
 });
 

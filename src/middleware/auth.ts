@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { SuiGrpcClient } from '@mysten/sui/grpc';
+import { SuiGraphQLClient } from '@mysten/sui/graphql';
 import { verifyPersonalMessageSignature } from '@mysten/sui/verify';
 import { getDb } from '../db/client.js';
 import { nonces } from '../db/schema.js';
@@ -55,8 +56,15 @@ export async function verifyAndIssueToken(address: string, signature: string, no
 
   let recoveredAddress = '';
   try {
-    const pubKey = await verifyPersonalMessageSignature(messageBytes, signature);
-    recoveredAddress = pubKey.toSuiAddress();
+    const graphqlClient = new SuiGraphQLClient({
+      network: 'testnet',
+      url: process.env.SUI_GRAPHQL_URL || 'https://graphql.testnet.sui.io/graphql',
+    });
+    const pubKey = await verifyPersonalMessageSignature(messageBytes, signature, {
+      client: graphqlClient,
+      address,
+    });
+    recoveredAddress = pubKey.verifyAddress(address) ? address : pubKey.toSuiAddress();
   } catch (sigErr: any) {
     throw new Error(`Cryptographic signature verification failed: ${sigErr.message}`);
   }

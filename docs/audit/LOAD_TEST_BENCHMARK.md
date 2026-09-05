@@ -23,38 +23,38 @@ This benchmark establishes the quantitative throughput limits, latency distribut
 ### Scenario A: Donor Feed Read Spike (`GET /api/campaigns`)
 - **Simulated Condition:** Disaster announcement burst; 1,500 requests at 30 concurrent connections.
 - **Total Requests:** 1500
-- **Duration:** 0.41 seconds
-- **Throughput:** **3667.48 req/sec**
+- **Duration:** 0.49 seconds
+- **Throughput:** **3042.6 req/sec**
 - **Error Rate:** 0.00% (0 failed requests)
 - **Latency Distribution:**
-  - **Min:** 3.66 ms
-  - **p50 (Median):** **6.80 ms**
-  - **p90:** 11.68 ms
-  - **p95:** **13.27 ms**
-  - **p99:** **32.14 ms**
-  - **Max:** 94.57 ms
+  - **Min:** 5.26 ms
+  - **p50 (Median):** **8.37 ms**
+  - **p90:** 13.48 ms
+  - **p95:** **16.69 ms**
+  - **p99:** **25.57 ms**
+  - **Max:** 100.94 ms
 
 ### Scenario B: Public Audit Log Transparency (`GET /api/audit-logs`)
 - **Simulated Condition:** Multiple transparency watchers & NGO dashboards scraping governance actions; 800 requests at 20 concurrent connections.
 - **Total Requests:** 800
-- **Duration:** 0.40 seconds
-- **Throughput:** **2005.01 req/sec**
+- **Duration:** 0.32 seconds
+- **Throughput:** **2500 req/sec**
 - **Error Rate:** 0.00%
 - **Latency Distribution:**
-  - **p50 (Median):** **6.45 ms**
-  - **p95:** **19.19 ms**
-  - **p99:** **89.64 ms**
+  - **p50 (Median):** **6.73 ms**
+  - **p95:** **14.32 ms**
+  - **p99:** **21.14 ms**
 
 ### Scenario C: Evidence Hash Re-Verification API (`POST /api/evidence/verify-integrity`)
 - **Simulated Condition:** Real-time SHA-256 integrity checks against cached metadata; 500 requests at 15 concurrent connections.
 - **Total Requests:** 500
-- **Duration:** 0.07 seconds
-- **Throughput:** **7692.31 req/sec**
+- **Duration:** 0.06 seconds
+- **Throughput:** **8196.72 req/sec**
 - **Error Rate:** 0.00%
 - **Latency Distribution:**
-  - **p50 (Median):** **1.49 ms**
-  - **p95:** **4.10 ms**
-  - **p99:** **7.17 ms**
+  - **p50 (Median):** **1.40 ms**
+  - **p95:** **4.12 ms**
+  - **p99:** **4.54 ms**
 
 ---
 
@@ -65,11 +65,11 @@ The local Sui Event Indexer (`src/indexer/eventIndexer.ts`) processes streaming 
 | Metric | Result | Operational Significance |
 |---|---|---|
 | **Event Stream Batch Size** | **3,000 events** | Realistic multi-hour disaster surge |
-| **Ingestion Time** | **2064.36 ms** | Real-time stream processing |
-| **Ingestion Throughput** | **1,453.24 events/sec** | Well exceeds Sui peak block event generation |
+| **Ingestion Time** | **2086.78 ms** | Real-time stream processing |
+| **Ingestion Throughput** | **1,437.62 events/sec** | Well exceeds Sui peak block event generation |
 | **Duplicate Events Injected** | **500 duplicates** | Simulating RPC reconnections & re-scans |
-| **Deduplication Rate** | **757,671.04 checks/sec** | O(1) hash set deduplication efficiency |
-| **State Disk Serialization** | **1.66 ms** | Low I/O overhead on NVMe/SSD |
+| **Deduplication Rate** | **654,058.17 checks/sec** | O(1) hash set deduplication efficiency |
+| **State Disk Serialization** | **1.56 ms** | Low I/O overhead on NVMe/SSD |
 | **Projected State Size** | **559.7 KB** | Compact disk footprint per 3k events |
 
 ---
