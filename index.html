@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ReliefChain — AI Relief Fund on sui,powered by walrus</title>
+  <title>ReliefChain — Decentralized Disaster Relief Powered by Sui</title>
   <meta name="description"
     content="Connecting donors to disaster victims with zero middlemen. Every rupee tracked on-chain, every document stored on Walrus. Built on Sui.">
 
@@ -12,22 +12,23 @@
   <link rel="icon" type="image/svg+xml"
     href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'><polygon points='12 2 22 7 22 17 12 22 2 17 2 7' stroke='%2322c55e' stroke-width='2.5' fill='rgba(34,197,94,0.1)'/><path d='M12 7v10M7 12h10' stroke='%234ade80' stroke-width='2.5' stroke-linecap='round'/></svg>">
 
-  <!-- Typography: Inter Body + Unique Futuristic Display Fonts (Syne & Unbounded) -->
+  <!-- Typography: Inter Body + Ultra-Slick Display & Heading Fonts (Plus Jakarta Sans & Outfit) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Syne:wght@600;700;800;900&family=Unbounded:wght@600;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800;900&family=Plus+Jakarta+Sans:wght@500;600;700;800;900&display=swap" rel="stylesheet">
   <style>
     :root {
       --bg: #050a05;
       --primary: #22c55e;
       --accent: #4ade80;
+      --sui-blue: #38bdf8;
       --white: #ffffff;
       --text-muted: rgba(255, 255, 255, 0.38);
       --nav-text: rgba(255, 255, 255, 0.5);
       --border-green: rgba(34, 197, 94, 0.45);
-      --font-display: 'Unbounded', sans-serif;
-      --font-heading: 'Syne', sans-serif;
-      --font-body: 'Inter', sans-serif;
+      --font-display: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-heading: 'Outfit', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     }
 
     * {
@@ -293,45 +294,82 @@
     /* Heading */
     .hero-title {
       font-family: var(--font-heading);
-      font-size: clamp(38px, 6.2vw, 78px);
+      font-size: clamp(38px, 5.8vw, 76px);
       font-weight: 800;
       line-height: 1.08;
       color: var(--white);
-      max-width: 880px;
+      max-width: 920px;
       margin-bottom: 24px;
-      letter-spacing: -2px;
+      letter-spacing: -0.035em;
     }
 
     .hero-title strong {
       font-family: var(--font-heading);
-      font-weight: 900;
+      font-weight: 800;
       color: var(--white);
+      letter-spacing: inherit;
     }
 
-    .hero-title span {
+    .hero-brand-wrap {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      vertical-align: baseline;
+      flex-wrap: wrap;
+    }
+
+    .hero-brand-text {
       font-family: var(--font-display);
+      font-weight: 800;
+      letter-spacing: -0.03em;
       color: var(--primary);
-      text-shadow: 0 0 32px rgba(34, 197, 94, 0.55);
-      font-weight: 900;
-      letter-spacing: -1.2px;
-      position: relative;
+      text-shadow: 0 0 32px rgba(34, 197, 94, 0.45);
       display: inline-block;
     }
 
-    .powered-by-walrus {
-      position: absolute;
-      bottom: -16px;
-      right: 0;
-      font-size: 9px;
-      font-weight: 700;
-      font-style: italic;
-      font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
-      color: #00f3ff;
-      text-shadow: 0 0 8px rgba(0, 243, 255, 0.8), 0 0 15px rgba(0, 243, 255, 0.4);
+    .powered-by-sui {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px 4px 9px;
+      border-radius: 999px;
+      background: rgba(56, 189, 248, 0.08);
+      border: 1px solid rgba(56, 189, 248, 0.32);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      box-shadow: 0 0 16px rgba(56, 189, 248, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+      vertical-align: middle;
+      transform: translateY(-6px);
       white-space: nowrap;
-      line-height: 1;
-      letter-spacing: 1.5px;
-      text-transform: lowercase;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      cursor: default;
+      text-decoration: none;
+    }
+
+    .powered-by-sui:hover {
+      background: rgba(56, 189, 248, 0.16);
+      border-color: rgba(56, 189, 248, 0.55);
+      box-shadow: 0 0 24px rgba(56, 189, 248, 0.35);
+      transform: translateY(-8px);
+    }
+
+    .powered-by-sui-text {
+      font-family: var(--font-display) !important;
+      font-size: 11px !important;
+      font-weight: 700 !important;
+      font-style: normal !important;
+      letter-spacing: 1.2px !important;
+      text-transform: uppercase !important;
+      color: #38bdf8 !important;
+      text-shadow: 0 0 10px rgba(56, 189, 248, 0.6) !important;
+      line-height: 1 !important;
+    }
+
+    .sui-pill-icon {
+      width: 13px;
+      height: 13px;
+      flex-shrink: 0;
+      filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.8));
     }
 
     /* Subtext */
@@ -2002,8 +2040,8 @@
       Build on Sui Blockchain
     </div>
 
-    <h1 class="hero-title">Rebuilding Humanity Through <strong><span>ReliefChain<span
-            class="powered-by-walrus">powered by walrus</span></span></strong></h1>
+    <h1 class="hero-title">Rebuilding Humanity Through <strong><span class="hero-brand-wrap"><span
+            class="hero-brand-text">ReliefChain</span><span class="powered-by-sui"><svg class="sui-pill-icon" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 1.5C8 1.5 3.5 6.8 3.5 10.2C3.5 12.6 5.5 14.5 8 14.5C10.5 14.5 12.5 12.6 12.5 10.2C12.5 6.8 8 1.5 8 1.5Z" fill="url(#sui-pill-grad)"/><defs><linearGradient id="sui-pill-grad" x1="8" y1="1.5" x2="8" y2="14.5" gradientUnits="userSpaceOnUse"><stop stop-color="#38bdf8"/><stop offset="1" stop-color="#0284c7"/></linearGradient></defs></svg><span class="powered-by-sui-text">powered by sui</span></span></span></strong></h1>
 
     <p class="hero-subtext">A decentralized Web3 disaster relief network leveraging Sui blockchain
       transparency and Walrus storage to coordinate rescue operations, stream direct donations, and securely
