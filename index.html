@@ -2975,7 +2975,7 @@
 
   <!-- Sui Blockchain Integration Client Script -->
   <script type="module">
-    import { getSuiBalance, getLatestCheckpoint, getWalletsList, connectWallet, donateSuiOnChain, createCampaignOnChain, fetchCampaignOnChain, getCleanErrorMessage } from './suiConnection.js?v=10';
+    import { getSuiBalance, getLatestCheckpoint, getWalletsList, connectWallet, donateSuiOnChain, createCampaignOnChain, fetchCampaignOnChain, getCleanErrorMessage } from './suiConnection.js?v=11';
 
     // State Variables
     let connectedWallet = null;
@@ -3146,11 +3146,16 @@
         connectedWallet = connection.wallet;
         userAddress = connection.account.address;
 
-        // Fetch real balance
+        // Show immediate connected state with fetching indicator
+        updateUIConnected(userAddress, 0, wallet.name);
+        const shortAddr = userAddress.substring(0, 6) + '...' + userAddress.substring(userAddress.length - 4);
+        btnConnectNavbar.innerHTML = `${shortAddr} <span class="wallet-balance">| Loading SUI...</span>`;
+
+        // Fetch real balance via multi-RPC failover / proxy
         const balance = await getSuiBalance(userAddress);
         updateUIConnected(userAddress, balance, wallet.name);
 
-        showToast('Success', `Connected to ${wallet.name} successfully!`);
+        showToast('Success', `Connected to ${wallet.name} successfully! (${balance.toFixed(2)} SUI)`);
         localStorage.setItem('reliefchain_wallet', 'installed');
         localStorage.setItem('reliefchain_wallet_name', wallet.name);
         localStorage.setItem('reliefchain_address', userAddress);
@@ -3208,15 +3213,19 @@
         };
         const connection = await connectWallet(walletWrapper);
         const address = connection.account.address;
-        const balance = await getSuiBalance(address);
-        
         userAddress = address; // Update global state
+        connectedWallet = connection.wallet;
+
+        updateUIConnected(address, 0, 'Slush Wallet');
+        const shortAddr = address.substring(0, 6) + '...' + address.substring(address.length - 4);
+        btnConnectNavbar.innerHTML = `${shortAddr} <span class="wallet-balance">| Loading SUI...</span>`;
+
+        const balance = await getSuiBalance(address);
         updateUIConnected(address, balance, 'Slush Wallet');
-        showToast('Success', 'Connected to Slush Wallet successfully!');
+        showToast('Success', `Connected to Slush Wallet successfully! (${balance.toFixed(2)} SUI)`);
 
         localStorage.setItem('reliefchain_wallet', 'slush');
         localStorage.setItem('reliefchain_address', address);
-        connectedWallet = connection.wallet;
       } catch (err) {
         console.error('Slush connection error:', err);
         showToast('Connection Failed', err.message || 'Could not connect to Slush Wallet.', true);

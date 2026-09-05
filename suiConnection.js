@@ -33,7 +33,12 @@
  *   5. Legacy injected provider       (window.suiWallet etc.)
  */
 
-const RPC_URL = 'https://fullnode.testnet.sui.io:443';
+const SUI_RPC_ENDPOINTS = [
+  'https://sui-testnet-endpoint.blockvision.org',
+  'https://testnet.sui.rpcpool.com',
+  'https://fullnode.testnet.sui.io:443'
+];
+let activeRpcIndex = 0;
 
 import { getWallets } from 'https://esm.sh/@mysten/wallet-standard@0.20.3';
 import { Transaction } from 'https://esm.sh/@mysten/sui@2.17.0/transactions';
@@ -74,32 +79,69 @@ try {
   console.error('[ReliefChain] Wallet Standard init failed:', e);
 }
 
-// ── JSON-RPC helper ───────────────────────────────────────────────
+// ── Resilient Failover JSON-RPC helper ──────────────────────────────
 async function sendRpcRequest(method, params = []) {
   const headers = { 'Content-Type': 'application/json' };
+  let lastErr = null;
 
-  const body = JSON.stringify({ jsonrpc: '2.0', id: Date.now(), method, params });
-  console.log(`[RPC ▶] ${method}`, params.length > 0 ? '(params logged below)' : '');
-  if (params.length > 0) console.log(`[RPC ▶] params:`, params);
+  for (let i = 0; i < SUI_RPC_ENDPOINTS.length; i++) {
+    const idx = (activeRpcIndex + i) % SUI_RPC_ENDPOINTS.length;
+    const rpcUrl = SUI_RPC_ENDPOINTS[idx];
 
-  const resp = await fetch(RPC_URL, { method: 'POST', headers, body });
-  if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
+    try {
+      const body = JSON.stringify({ jsonrpc: '2.0', id: Date.now(), method, params });
+      const resp = await fetch(rpcUrl, { method: 'POST', headers, body });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
 
-  const data = await resp.json();
-  if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+      const data = await resp.json();
+      if (data.error) {
+        throw new Error(data.error.message || JSON.stringify(data.error));
+      }
 
-  return data.result;
+      activeRpcIndex = idx; // Pin working endpoint
+      return data.result;
+    } catch (e) {
+      lastErr = e;
+      console.warn(`[ReliefChain RPC Failover] Endpoint ${rpcUrl} failed for ${method}: ${e.message}. Trying backup...`);
+    }
+  }
+
+  throw lastErr || new Error('All Sui RPC endpoints failed.');
 }
 
 // ── Public RPC helpers ────────────────────────────────────────────
 export async function getSuiBalance(address) {
-  try {
-    const r = await sendRpcRequest('suix_getBalance', [address, '0x2::sui::SUI']);
-    return Number(r?.totalBalance || '0') / 1_000_000_000;
-  } catch (e) {
-    console.warn('[ReliefChain] getSuiBalance fallback 0:', e.message);
+  if (!address || typeof address !== 'string' || !address.startsWith('0x')) {
     return 0;
   }
+
+  // 1. Direct browser query with RPC failover
+  try {
+    const r = await sendRpcRequest('suix_getBalance', [address, '0x2::sui::SUI']);
+    if (r && r.totalBalance !== undefined) {
+      const bal = Number(r.totalBalance) / 1_000_000_000;
+      console.log(`[ReliefChain] Fetched SUI balance for ${address}: ${bal.toFixed(4)} SUI`);
+      return bal;
+    }
+  } catch (e) {
+    console.warn('[ReliefChain] Direct getSuiBalance RPC failed:', e.message);
+  }
+
+  // 2. High-reliability server proxy fallback
+  try {
+    const resp = await fetch(`/api/sui/balance/${address}`);
+    if (resp.ok) {
+      const data = await resp.json();
+      if (data.success && typeof data.balanceSui === 'number') {
+        console.log(`[ReliefChain] Fetched SUI balance via backend proxy: ${data.balanceSui.toFixed(4)} SUI`);
+        return data.balanceSui;
+      }
+    }
+  } catch (proxyErr) {
+    console.warn('[ReliefChain] Backend balance proxy fallback error:', proxyErr.message);
+  }
+
+  return 0;
 }
 
 export async function getLatestCheckpoint() {

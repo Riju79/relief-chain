@@ -891,6 +891,29 @@ app.get('/dashboard/evidence/:blobId', (req, res) => {
   res.sendFile(path.join(__dirname, 'evidence.html'));
 });
 
+// ── Sui On-Chain Balance Query Proxy ──────────────────────────────
+app.get('/api/sui/balance/:address', async (req, res) => {
+  try {
+    const { address } = req.params;
+    if (!address || typeof address !== 'string' || !address.startsWith('0x')) {
+      return res.status(400).json({ success: false, error: 'Invalid Sui address format.' });
+    }
+    const balResult = await suiClient.getBalance({ owner: address });
+    const totalMist = balResult?.totalBalance || '0';
+    const balanceSui = Number(totalMist) / 1_000_000_000;
+    res.json({
+      success: true,
+      address,
+      totalMist,
+      balanceSui,
+      coinObjectCount: balResult?.coinObjectCount || 0
+    });
+  } catch (err) {
+    console.error(`[BALANCE API ERROR] Failed to fetch balance for ${req.params.address}:`, err.message);
+    res.status(502).json({ success: false, error: err.message, balanceSui: 0 });
+  }
+});
+
 // ── On-chain config API endpoint ──────────────────────────────────
 // Serves the deployed package ID to the frontend so suiConnection.js
 // can build correct moveCall targets without hardcoding.

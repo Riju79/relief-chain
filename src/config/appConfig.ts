@@ -50,10 +50,9 @@ if (!packageId || packageId === '0x000000000000000000000000000000000000000000000
 }
 
 const defaultSuiRpcUrls = [
-  process.env.SUI_RPC_URL || 'https://fullnode.testnet.sui.io:443',
   'https://sui-testnet-endpoint.blockvision.org',
   'https://testnet.sui.rpcpool.com',
-  'https://sui-testnet.public.blastapi.io'
+  process.env.SUI_RPC_URL || 'https://fullnode.testnet.sui.io:443'
 ].filter(Boolean);
 
 const suiRpcUrls = process.env.SUI_RPC_URLS
