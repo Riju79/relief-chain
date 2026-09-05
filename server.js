@@ -1042,7 +1042,9 @@ app.get('/api/sui/balance/:address', async (req, res) => {
 app.get('/api/config', (req, res) => {
   res.json({
     success: true,
-    packageId: process.env.RELIEFCHAIN_PACKAGE_ID || '',
+    packageId: process.env.RELIEFCHAIN_PACKAGE_ID || '0x9c0e1fe411f3f1bc9b877710d000ef4ca3113e3461cdffed469be1f1bd7b5bfe',
+    adminCapId: process.env.ADMIN_CAP_OBJECT_ID || '0x21e2ca751c1157689c086dd223487841fe4ef53b5e95ac0c935f009261c5191f',
+    verifierCapId: process.env.VERIFIER_CAP_OBJECT_ID || '0xf5d8fbb6bb38c2b5be734f2fd8e4ac5797e033b9f073448267f5adb953e1921c',
     network: process.env.NETWORK || 'testnet',
     moduleName: 'relief_chain',
   });
