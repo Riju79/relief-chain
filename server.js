@@ -616,6 +616,18 @@ app.get('/dashboard/evidence/:blobId', (req, res) => {
   res.sendFile(path.join(__dirname, 'evidence.html'));
 });
 
+// ── On-chain config API endpoint ──────────────────────────────────
+// Serves the deployed package ID to the frontend so suiConnection.js
+// can build correct moveCall targets without hardcoding.
+app.get('/api/config', (req, res) => {
+  res.json({
+    success: true,
+    packageId: process.env.RELIEFCHAIN_PACKAGE_ID || '',
+    network: process.env.NETWORK || 'testnet',
+    moduleName: 'relief_chain',
+  });
+});
+
 app.use(express.static(path.join(__dirname, './')));
 
 app.listen(PORT, () => {

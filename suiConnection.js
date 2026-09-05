@@ -1,89 +1,57 @@
 /**
  * ReliefChain Browser Connection Layer
- * Communicates directly with Tatum RPC and standard Sui Wallets in the browser.
+ * Communicates with Sui Move contract via Programmable Transaction Blocks
+ * and standard Sui Wallets (wallet-standard) in the browser.
  *
  * ═══════════════════════════════════════════════════════════════════
- * WHY "TRPCClientError: Incorrect password" HAPPENS
+ * ON-CHAIN WIRING
  * ═══════════════════════════════════════════════════════════════════
  *
- * The Slush/Sui Wallet extension uses TRPC internally to communicate
- * between its background service and its content-script/popup.
- * The background service owns the encrypted keyring (Vault) and is
- * the only process that can sign transactions.
+ * Every "financial" action now goes through a real tx.moveCall to the
+ * deployed relief_chain Move package:
  *
- * "Incorrect password" is thrown by Vault.decrypt() inside the
- * background service when it cannot decrypt the private key from
- * the vault. This happens in THREE situations:
+ *   donateSuiOnChain     → ::relief_chain::donate
+ *   createCampaignOnChain → ::relief_chain::create_campaign
+ *   verifyCampaignOnChain → ::relief_chain::verify_campaign
+ *   addMilestoneOnChain   → ::relief_chain::add_milestone
+ *   attachEvidenceOnChain → ::relief_chain::attach_evidence
+ *   approveMilestoneOnChain → ::relief_chain::approve_milestone
+ *   releaseFundsOnChain   → ::relief_chain::release_funds
+ *   completeCampaignOnChain → ::relief_chain::complete_campaign
+ *   cancelCampaignOnChain → ::relief_chain::cancel_campaign
  *
- *   (A) MOST COMMON — signTransactionBlock sends a malformed or
- *       unresolved Transaction object. The wallet tries to BCS-
- *       serialize it internally; if serialization fails the error
- *       propagates as "Incorrect password" due to a bug in the
- *       extension's error-mapping code.
- *
- *   (B) The wallet's background-service session key has been cleared
- *       (browser restart, extension update, computer sleep/wake)
- *       while the popup still shows as "unlocked". The session key
- *       that was used to decrypt the vault is gone, so any signing
- *       call fails with "Incorrect password". Fix: lock → unlock the
- *       extension manually via its toolbar icon before trying again.
- *
- *   (C) The account object passed to signTransactionBlock has a
- *       publicKey that doesn't match any stored keypair. The key
- *       lookup fails and the error is mapped to "Incorrect password".
- *
- * ───────────────────────────────────────────────────────────────────
- * DEFINITIVE FIX STRATEGY
- * ───────────────────────────────────────────────────────────────────
- *
- * Instead of using:
- *   sui:signTransaction  → dApp signs, then manually broadcasts
- *   sui:signTransactionBlock → deprecated, triggers the exact TRPC
- *                              path that shows "Incorrect password"
- *
- * We now PREFER:
- *   sui:signAndExecuteTransaction → wallet handles BOTH sign AND
- *                                   execute. This avoids the
- *                                   signTransactionBlock TRPC path
- *                                   entirely and is the officially
- *                                   recommended modern API.
- *
- * Priority order:
- *   1. sui:signAndExecuteTransaction  (modern, complete, avoids TRPC bug)
- *   2. sui:signTransaction            (modern sign-only + manual broadcast)
- *   3. sui:signTransactionBlock       (deprecated, last resort)
+ * No raw splitCoins → transferObjects bypassing the contract.
  *
  * ═══════════════════════════════════════════════════════════════════
- * ALL ROOT-CAUSE FIXES IN THIS FILE
+ * WALLET SIGNING PRIORITY
  * ═══════════════════════════════════════════════════════════════════
  *
- * Fix A: Switched primary signing path to sui:signAndExecuteTransaction
- *         — completely avoids the dApp.signTransactionBlock TRPC path
- *         that produces "Incorrect password".
- *
- * Fix B: tx.pure('u64', value) removed in @mysten/sui 2.x.
- *         Now uses tx.pure.u64() / tx.pure.address().
- *
- * Fix C: tx.setSender(senderAddress) added before wallet hand-off.
- *
- * Fix D: tx.setGasBudget(10_000_000) added — prevents wallet internal
- *         dry-run that can itself throw "Incorrect password" on failure.
- *
- * Fix E: tx.serialize() used to log pre-sign transaction bytes and
- *         to pass a serialized (stable) form to the wallet, avoiding
- *         any SDK version mismatch in the wallet's internal builder.
- *
- * Fix F: Signed-result field names normalised across all feature
- *         versions (bytes / transactionBytes / transactionBlockBytes).
- *
- * Fix G: getCleanErrorMessage no longer masks errors.
+ *   1. sui:signAndExecuteTransaction  (modern, avoids TRPC bug)
+ *   2. sui:signAndExecuteTransactionBlock (deprecated exec fallback)
+ *   3. sui:signTransaction            (sign-only + manual broadcast)
+ *   4. sui:signTransactionBlock       (deprecated, last resort)
+ *   5. Legacy injected provider       (window.suiWallet etc.)
  */
 
 const RPC_URL = 'https://fullnode.testnet.sui.io:443';
-const API_KEY = '';
 
 import { getWallets } from 'https://esm.sh/@mysten/wallet-standard@0.20.3';
 import { Transaction } from 'https://esm.sh/@mysten/sui@2.17.0/transactions';
+
+// ── Package ID configuration ──────────────────────────────────────
+// Read from window.RELIEFCHAIN_CONFIG (injected by server.js or index.html)
+// or fall back to a hardcoded value set during deployment.
+function getPackageId() {
+  const id = window.RELIEFCHAIN_CONFIG?.packageId
+    || document.querySelector('meta[name="reliefchain-package-id"]')?.content;
+  if (!id || id === '0x0000000000000000000000000000000000000000000000000000000000000000') {
+    throw new Error(
+      '[ReliefChain] PACKAGE_ID is not configured. ' +
+      'Set window.RELIEFCHAIN_CONFIG.packageId or add <meta name="reliefchain-package-id"> to the page.'
+    );
+  }
+  return id;
+}
 
 // ── Wallet-standard registry ──────────────────────────────────────
 if (!window.registeredSuiWallets) {
@@ -109,7 +77,6 @@ try {
 // ── JSON-RPC helper ───────────────────────────────────────────────
 async function sendRpcRequest(method, params = []) {
   const headers = { 'Content-Type': 'application/json' };
-  if (API_KEY) headers['x-api-key'] = API_KEY;
 
   const body = JSON.stringify({ jsonrpc: '2.0', id: Date.now(), method, params });
   console.log(`[RPC ▶] ${method}`, params.length > 0 ? '(params logged below)' : '');
@@ -142,6 +109,47 @@ export async function getLatestCheckpoint() {
   } catch (e) {
     return Math.floor(Date.now() / 1000);
   }
+}
+
+// ── Fetch Campaign On-Chain State ────────────────────────────────
+/**
+ * Read a Campaign shared object directly from Sui RPC.
+ * Returns { fundsRaised, treasury, status, goal, title, creator, ... } in SUI (not MIST).
+ */
+export async function fetchCampaignOnChain(campaignObjectId) {
+  if (!campaignObjectId || !campaignObjectId.startsWith('0x')) {
+    throw new Error(`Invalid campaign object ID: "${campaignObjectId}"`);
+  }
+
+  const obj = await sendRpcRequest('sui_getObject', [
+    campaignObjectId,
+    { showContent: true, showType: true }
+  ]);
+
+  if (!obj?.data?.content?.fields) {
+    throw new Error(`Campaign object ${campaignObjectId} not found on chain or has no fields.`);
+  }
+
+  const fields = obj.data.content.fields;
+
+  return {
+    campaignId: campaignObjectId,
+    title: fields.title || '',
+    description: fields.description || '',
+    location: fields.location || '',
+    severity: Number(fields.severity || 0),
+    goal: Number(fields.goal || 0) / 1_000_000_000,
+    fundsRaised: Number(fields.funds_raised || 0) / 1_000_000_000,
+    totalReleased: Number(fields.total_released || 0) / 1_000_000_000,
+    treasury: Number(fields.treasury?.fields?.value ?? fields.treasury ?? 0) / 1_000_000_000,
+    creator: fields.creator || '',
+    status: Number(fields.status || 0),
+    milestonesCount: Array.isArray(fields.milestones) ? fields.milestones.length : 0,
+    evidenceCount: Array.isArray(fields.evidence_records) ? fields.evidence_records.length : 0,
+    milestones: fields.milestones || [],
+    evidenceRecords: fields.evidence_records || [],
+    raw: fields,
+  };
 }
 
 // ── Wallet discovery ──────────────────────────────────────────────
@@ -248,154 +256,64 @@ export function isValidSuiAddress(address) {
   return /^[0-9a-fA-F]{64}$/.test(hexPart);
 }
 
-// ── Donation transaction ──────────────────────────────────────────
-/**
- * Builds, signs, and executes a SUI transfer on Testnet.
- *
- * Signing priority (avoids the dApp.signTransactionBlock TRPC path):
- *   1. sui:signAndExecuteTransaction  → wallet signs + executes
- *   2. sui:signTransaction            → dApp signs + broadcasts via Tatum
- *   3. sui:signTransactionBlock       → deprecated fallback
- */
-export async function donateSuiOnChain(wallet, senderAddress, recipientAddress, amountSui) {
 
-  // ── 1. Pre-flight parameter validation ──────────────────────────
+// ════════════════════════════════════════════════════════════════════
+// UNIFIED SIGNING + EXECUTION ENGINE
+// ════════════════════════════════════════════════════════════════════
+/**
+ * Signs and executes a pre-built Transaction using the connected wallet.
+ * Tries signing paths in priority order: A → A2 → B → C → D
+ *
+ * @param {object} wallet - The connected wallet object
+ * @param {string} senderAddress - The sender's Sui address
+ * @param {Transaction} tx - A fully-built Transaction (with moveCall/etc already set)
+ * @param {string} actionLabel - Human-readable label for logging
+ * @returns {{ digest: string, rawResult: any }}
+ */
+async function signAndExecuteTx(wallet, senderAddress, tx, actionLabel = 'transaction') {
   if (!wallet?.suiWalletObject) {
     throw new Error('Wallet is not connected. Please reconnect your wallet.');
   }
-  if (typeof amountSui !== 'number' || isNaN(amountSui) || amountSui <= 0) {
-    throw new Error(`Invalid donation amount: "${amountSui}". Must be a positive number.`);
-  }
   if (!isValidSuiAddress(senderAddress)) {
-    throw new Error(`Invalid sender address: "${senderAddress}". Must be a valid 32-byte hexadecimal Sui address starting with "0x" (66 characters total).`);
-  }
-  if (!isValidSuiAddress(recipientAddress)) {
-    throw new Error(`Invalid recipient address: "${recipientAddress}". Must be a valid 32-byte hexadecimal Sui address starting with "0x" (66 characters total).`);
+    throw new Error(`Invalid sender address: "${senderAddress}".`);
   }
 
-  // ── 2. Balance check ────────────────────────────────────────────
-  try {
-    const bal = await getSuiBalance(senderAddress);
-    const needed = amountSui + 0.02;
-    if (bal < needed) {
-      throw new Error(
-        `Insufficient SUI: wallet has ${bal.toFixed(4)} SUI but needs ≥ ${needed.toFixed(4)} SUI ` +
-        `(amount + 0.02 gas). Get testnet SUI at https://faucet.testnet.sui.io`
-      );
-    }
-    console.log(`[ReliefChain] ✔ Balance OK: ${bal.toFixed(4)} SUI (need ${needed.toFixed(4)})`);
-  } catch (e) {
-    if (e.message.includes('Insufficient SUI')) throw e;
-    console.warn('[ReliefChain] Balance check non-fatal:', e.message);
-  }
-
-  // ── 3. Build Transaction ─────────────────────────────────────────
-  const amountInMist = BigInt(Math.floor(amountSui * 1_000_000_000));
-  const tx = new Transaction();
-
-  // Fix C: set sender — wallet verifies signer ≡ sender
+  // Set sender & gas budget
   tx.setSender(senderAddress);
+  tx.setGasBudget(50_000_000); // 0.05 SUI — ample for moveCall operations
 
-  // Fix D: explicit gas budget — prevents wallet internal dry-run failure
-  tx.setGasBudget(10_000_000);  // 0.01 SUI — ample for a coin transfer
-
-  // Fix B: tx.pure.u64() / tx.pure.address() — 2-arg form removed in sdk 2.x
-  const [coin] = tx.splitCoins(tx.gas, [tx.pure.u64(amountInMist)]);
-  tx.transferObjects([coin], tx.pure.address(recipientAddress));
-
-  // ── 4. Resolve wallet objects ────────────────────────────────────
   const walletObj = wallet.suiWalletObject;
   const features  = walletObj.features || {};
   const featKeys  = Object.keys(features);
 
-  // Resolve the account that matches senderAddress
   const activeAccount =
     walletObj.accounts?.find(a => a.address === senderAddress) ??
     walletObj.accounts?.[0] ?? null;
 
-  // ── 5. EXHAUSTIVE PRE-SIGNING AUDIT LOG ────────────────────────
-  // Serialise the transaction so we can log the exact JSON + bytes
-  let txSerialised = '(serialize() not available)';
-  let txJSON       = '(toJSON() not available)';
-  try { txSerialised = tx.serialize(); }  catch (_) {}
-  try { txJSON       = JSON.parse(tx.serialize()); } catch (_) {}
+  // Pre-sign serialization for logging
+  let txJSON = '(unavailable)';
+  try { txJSON = JSON.parse(tx.serialize()); } catch (_) {}
 
-  console.group('[ReliefChain] ══ PRE-SIGN AUDIT ══════════════════════════');
-
-  // ── Wallet ──
-  console.log('WALLET OBJECT (raw)          :', walletObj);
-  console.log('WALLET NAME                  :', wallet.name ?? '(unknown)');
-  console.log('WALLET IS STANDARD           :', wallet.isStandard);
-  console.log('WALLET FEATURES              :', featKeys.join(', ') || '(none)');
-  console.log('supports signAndExecuteTx    :', !!features['sui:signAndExecuteTransaction']);
-  console.log('supports signTx              :', !!features['sui:signTransaction']);
-  console.log('supports signTxBlock (depr.) :', !!features['sui:signTransactionBlock']);
-
-  // ── Account ──
-  console.log('ACCOUNT OBJECT (resolved)    :', activeAccount);
-  console.log('ACCOUNT ADDRESS              :', activeAccount?.address ?? 'UNDEFINED ← PROBLEM');
-  console.log('SENDER ADDRESS (param)       :', senderAddress);
-  console.log('ADDRESS MATCH?               :', activeAccount?.address === senderAddress);
-
-  // ── Transaction ──
-  console.log('CHAIN                        : sui:testnet');
-  console.log('AMOUNT (SUI)                 :', amountSui);
-  console.log('AMOUNT (MIST)                :', amountInMist.toString());
-  console.log('GAS BUDGET                   : 10,000,000 MIST (0.01 SUI)');
-  console.log('RECIPIENT                    :', recipientAddress);
-  console.log('TX SERIALISED (base64)       :', txSerialised);
-  console.log('TX BLOCK JSON                :', txJSON);
-
+  console.group(`[ReliefChain] ══ PRE-SIGN AUDIT: ${actionLabel} ══`);
+  console.log('WALLET          :', wallet.name ?? '(unknown)');
+  console.log('SENDER          :', senderAddress);
+  console.log('ACCOUNT MATCH   :', activeAccount?.address === senderAddress);
+  console.log('FEATURES        :', featKeys.join(', '));
+  console.log('TX JSON         :', txJSON);
   console.groupEnd();
-  // ── END OF AUDIT LOG ─────────────────────────────────────────────
 
-  // ── 6. Pre-signing guards ────────────────────────────────────────
   if (!activeAccount) {
-    throw new Error(
-      `No wallet account found for ${senderAddress}. ` +
-      'Ensure your wallet has an active account and is connected to Testnet.'
-    );
-  }
-  if (!activeAccount.address) {
-    throw new Error(
-      `Wallet account exists but account.address is undefined. ` +
-      `Account object: ${JSON.stringify(activeAccount)}`
-    );
+    throw new Error(`No wallet account found for ${senderAddress}.`);
   }
   if (activeAccount.address !== senderAddress) {
-    throw new Error(
-      `Account mismatch: wallet active account is "${activeAccount.address}" ` +
-      `but expected sender "${senderAddress}". Switch accounts in your wallet.`
-    );
+    throw new Error(`Account mismatch: wallet is "${activeAccount.address}" but expected "${senderAddress}".`);
   }
 
-  // ── 7. Choose signing method (in priority order) ─────────────────
   let executeResult;
 
-  // ────────────────────────────────────────────────────────────────
-  // PATH A: sui:signAndExecuteTransaction (Modern standard)
-  // ────────────────────────────────────────────────────────────────
+  // ── PATH A: sui:signAndExecuteTransaction ──
   if (features['sui:signAndExecuteTransaction']) {
-    console.log('[ReliefChain] ▶ PATH A: sui:signAndExecuteTransaction (preferred modern path)');
-
-    const walletVersion = walletObj.version || 'unknown';
-    console.error('[Sui Wallet Request Object]:', {
-      walletName: wallet.name,
-      walletVersion: walletVersion,
-      account: activeAccount,
-      accountAddress: activeAccount?.address,
-      chain: 'sui:testnet',
-      transactionBlock: txJSON
-    });
-
-    console.group('[ReliefChain] ── signAndExecuteTransaction Call arguments ──');
-    console.log('feature      : sui:signAndExecuteTransaction');
-    console.log('transaction  :', txJSON);
-    console.log('account      :', activeAccount);
-    console.log('account.address:', activeAccount.address);
-    console.log('chain        : sui:testnet');
-    console.groupEnd();
-
+    console.log(`[ReliefChain] ▶ PATH A: sui:signAndExecuteTransaction (${actionLabel})`);
     let rawResult;
     try {
       rawResult = await features['sui:signAndExecuteTransaction'].signAndExecuteTransaction({
@@ -404,52 +322,17 @@ export async function donateSuiOnChain(wallet, senderAddress, recipientAddress, 
         chain: 'sui:testnet',
       });
     } catch (sigErr) {
-      console.error('[ReliefChain] sui:signAndExecuteTransaction threw error:');
-      console.error("Raw error:", sigErr);
-      console.error("Dir error:", sigErr);
-      console.error("Keys:", Object.keys(sigErr || {}));
-      console.error("Cause:", sigErr?.cause);
-      console.error("Data:", sigErr?.data);
-      console.error("Code:", sigErr?.code);
-      console.error("Meta:", sigErr?.meta);
-      console.error("Shape:", sigErr?.shape);
+      console.error(`[ReliefChain] signAndExecuteTransaction error (${actionLabel}):`, sigErr);
       throw sigErr;
     }
-
-    console.log('[ReliefChain] ✔ signAndExecuteTransaction raw result:', rawResult);
-
-    // Result shape: { digest, bytes, signature, effects (base64 BCS) }
     const digest = rawResult?.digest ?? rawResult?.effects?.transactionEffects?.transactionDigest ?? '';
-    console.log('[ReliefChain] ✅ Digest:', digest);
-    console.log('[ReliefChain] Explorer: https://suiscan.xyz/testnet/tx/' + digest);
-
+    console.log(`[ReliefChain] ✅ ${actionLabel} digest:`, digest);
     return { digest, rawResult };
   }
 
-  // ────────────────────────────────────────────────────────────────
-  // PATH A2: sui:signAndExecuteTransactionBlock (Deprecated executing fallback)
-  // ────────────────────────────────────────────────────────────────
+  // ── PATH A2: sui:signAndExecuteTransactionBlock ──
   else if (features['sui:signAndExecuteTransactionBlock']) {
-    console.log('[ReliefChain] ▶ PATH A2: sui:signAndExecuteTransactionBlock');
-
-    const walletVersion = walletObj.version || 'unknown';
-    console.error('[Sui Wallet Request Object]:', {
-      walletName: wallet.name,
-      walletVersion: walletVersion,
-      account: activeAccount,
-      accountAddress: activeAccount?.address,
-      chain: 'sui:testnet',
-      transactionBlock: txJSON
-    });
-
-    console.group('[ReliefChain] ── signAndExecuteTransactionBlock Call arguments ──');
-    console.log('feature         : sui:signAndExecuteTransactionBlock');
-    console.log('transactionBlock:', txJSON);
-    console.log('account         :', activeAccount);
-    console.log('account.address :', activeAccount.address);
-    console.log('chain           : sui:testnet');
-    console.groupEnd();
-
+    console.log(`[ReliefChain] ▶ PATH A2: sui:signAndExecuteTransactionBlock (${actionLabel})`);
     let rawResult;
     try {
       rawResult = await features['sui:signAndExecuteTransactionBlock'].signAndExecuteTransactionBlock({
@@ -458,51 +341,17 @@ export async function donateSuiOnChain(wallet, senderAddress, recipientAddress, 
         chain: 'sui:testnet',
       });
     } catch (sigErr) {
-      console.error('[ReliefChain] sui:signAndExecuteTransactionBlock threw error:');
-      console.error("Raw error:", sigErr);
-      console.error("Dir error:", sigErr);
-      console.error("Keys:", Object.keys(sigErr || {}));
-      console.error("Cause:", sigErr?.cause);
-      console.error("Data:", sigErr?.data);
-      console.error("Code:", sigErr?.code);
-      console.error("Meta:", sigErr?.meta);
-      console.error("Shape:", sigErr?.shape);
+      console.error(`[ReliefChain] signAndExecuteTransactionBlock error (${actionLabel}):`, sigErr);
       throw sigErr;
     }
-
-    console.log('[ReliefChain] ✔ signAndExecuteTransactionBlock raw result:', rawResult);
-
     const digest = rawResult?.digest ?? rawResult?.effects?.transactionEffects?.transactionDigest ?? '';
-    console.log('[ReliefChain] ✅ Digest:', digest);
-    console.log('[ReliefChain] Explorer: https://suiscan.xyz/testnet/tx/' + digest);
-
+    console.log(`[ReliefChain] ✅ ${actionLabel} digest:`, digest);
     return { digest, rawResult };
   }
 
-  // ────────────────────────────────────────────────────────────────
-  // PATH B: sui:signTransaction + manual Tatum broadcast
-  // ────────────────────────────────────────────────────────────────
+  // ── PATH B: sui:signTransaction + manual broadcast ──
   else if (features['sui:signTransaction']) {
-    console.log('[ReliefChain] ▶ PATH B: sui:signTransaction + manual broadcast');
-
-    const walletVersion = walletObj.version || 'unknown';
-    console.error('[Sui Wallet Request Object]:', {
-      walletName: wallet.name,
-      walletVersion: walletVersion,
-      account: activeAccount,
-      accountAddress: activeAccount?.address,
-      chain: 'sui:testnet',
-      transactionBlock: txJSON
-    });
-
-    console.group('[ReliefChain] ── signTransaction Call arguments ──');
-    console.log('feature      : sui:signTransaction');
-    console.log('transaction  :', txJSON);
-    console.log('account      :', activeAccount);
-    console.log('account.address:', activeAccount.address);
-    console.log('chain        : sui:testnet');
-    console.groupEnd();
-
+    console.log(`[ReliefChain] ▶ PATH B: sui:signTransaction + broadcast (${actionLabel})`);
     let signedResult;
     try {
       signedResult = await features['sui:signTransaction'].signTransaction({
@@ -511,62 +360,19 @@ export async function donateSuiOnChain(wallet, senderAddress, recipientAddress, 
         chain: 'sui:testnet',
       });
     } catch (sigErr) {
-      console.error('[ReliefChain] sui:signTransaction threw error:');
-      console.error("Raw error:", sigErr);
-      console.error("Dir error:", sigErr);
-      console.error("Keys:", Object.keys(sigErr || {}));
-      console.error("Cause:", sigErr?.cause);
-      console.error("Data:", sigErr?.data);
-      console.error("Code:", sigErr?.code);
-      console.error("Meta:", sigErr?.meta);
-      console.error("Shape:", sigErr?.shape);
+      console.error(`[ReliefChain] signTransaction error (${actionLabel}):`, sigErr);
       throw sigErr;
     }
-
-    console.log('[ReliefChain] signTransaction raw result:', signedResult);
-    console.log('[ReliefChain] signTransaction result keys:', Object.keys(signedResult ?? {}));
-
     const txBytes  = signedResult?.bytes ?? signedResult?.transactionBytes ?? signedResult?.transactionBlockBytes;
     const signature = signedResult?.signature;
-
-    console.log('[ReliefChain] txBytes resolved?  :', !!txBytes,  txBytes  ? txBytes.slice(0,40)  + '...' : 'MISSING');
-    console.log('[ReliefChain] signature resolved? :', !!signature, signature ? signature.slice(0,40) + '...' : 'MISSING');
-
-    if (!txBytes)   throw new Error('Wallet signing response missing txBytes.  Keys: ' + Object.keys(signedResult ?? {}).join(', '));
-    if (!signature) throw new Error('Wallet signing response missing signature. Keys: ' + Object.keys(signedResult ?? {}).join(', '));
-
+    if (!txBytes)   throw new Error('Signing response missing txBytes.');
+    if (!signature) throw new Error('Signing response missing signature.');
     executeResult = await _broadcast(txBytes, signature);
   }
 
-  // ────────────────────────────────────────────────────────────────
-  // PATH C: sui:signTransactionBlock (DEPRECATED fallback)
-  // ────────────────────────────────────────────────────────────────
+  // ── PATH C: sui:signTransactionBlock (DEPRECATED) ──
   else if (features['sui:signTransactionBlock']) {
-    console.warn(
-      '[ReliefChain] ⚠ PATH C: Using DEPRECATED sui:signTransactionBlock.\n' +
-      '  This triggers the exact TRPC path (dApp.signTransactionBlock) that\n' +
-      '  produces "Incorrect password". Update Slush Wallet to the latest\n' +
-      '  version to get sui:signAndExecuteTransaction support.'
-    );
-
-    const walletVersion = walletObj.version || 'unknown';
-    console.error('[Sui Wallet Request Object]:', {
-      walletName: wallet.name,
-      walletVersion: walletVersion,
-      account: activeAccount,
-      accountAddress: activeAccount?.address,
-      chain: 'sui:testnet',
-      transactionBlock: txJSON
-    });
-
-    console.group('[ReliefChain] ── signTransactionBlock Call arguments ──');
-    console.log('feature         : sui:signTransactionBlock (DEPRECATED)');
-    console.log('transactionBlock:', txJSON);
-    console.log('account         :', activeAccount);
-    console.log('account.address :', activeAccount.address);
-    console.log('chain           : sui:testnet');
-    console.groupEnd();
-
+    console.warn(`[ReliefChain] ⚠ PATH C: DEPRECATED signTransactionBlock (${actionLabel})`);
     let signedResult;
     try {
       signedResult = await features['sui:signTransactionBlock'].signTransactionBlock({
@@ -575,95 +381,294 @@ export async function donateSuiOnChain(wallet, senderAddress, recipientAddress, 
         chain: 'sui:testnet',
       });
     } catch (sigErr) {
-      console.error('[ReliefChain] sui:signTransactionBlock threw error:');
-      console.error("Raw error:", sigErr);
-      console.error("Dir error:", sigErr);
-      console.error("Keys:", Object.keys(sigErr || {}));
-      console.error("Cause:", sigErr?.cause);
-      console.error("Data:", sigErr?.data);
-      console.error("Code:", sigErr?.code);
-      console.error("Meta:", sigErr?.meta);
-      console.error("Shape:", sigErr?.shape);
-
       const msg = sigErr?.message ?? String(sigErr);
       if (msg.toLowerCase().includes('incorrect password')) {
         throw new Error(
-          'Wallet rejected signing with "Incorrect password" via the deprecated ' +
-          'signTransactionBlock path. This means the wallet extension\'s background ' +
-          'service has a stale/expired session. TO FIX: click the Slush Wallet icon ' +
-          'in your browser toolbar, lock the wallet, re-enter your password to unlock ' +
-          'it, then try donating again. If this persists, update Slush Wallet to the ' +
-          'latest version which supports signAndExecuteTransaction.'
+          'Wallet rejected with "Incorrect password" via deprecated signTransactionBlock. ' +
+          'Lock → unlock the wallet, or update to the latest version.'
         );
       }
       throw sigErr;
     }
-
-    console.log('[ReliefChain] signTransactionBlock raw result:', signedResult);
-
     const txBytes   = signedResult?.bytes ?? signedResult?.transactionBytes ?? signedResult?.transactionBlockBytes;
     const signature = signedResult?.signature;
-
-    if (!txBytes)   throw new Error('Signing response missing txBytes.  Keys: ' + Object.keys(signedResult ?? {}).join(', '));
-    if (!signature) throw new Error('Signing response missing signature. Keys: ' + Object.keys(signedResult ?? {}).join(', '));
-
+    if (!txBytes || !signature) throw new Error('Signing response missing bytes or signature.');
     executeResult = await _broadcast(txBytes, signature);
   }
 
-  // ────────────────────────────────────────────────────────────────
-  // Legacy injected provider (window.suiWallet, window.slush, etc.)
-  // ────────────────────────────────────────────────────────────────
+  // ── PATH D: Legacy injected provider ──
   else if (!walletObj.features) {
-    console.warn('[ReliefChain] ▶ PATH D: Legacy injected provider');
-
-    console.group('[ReliefChain] ── Signing call arguments ──');
-    console.log('provider       :', walletObj);
-    console.log('hasSignTx      :', typeof walletObj.signTransaction === 'function');
-    console.log('hasSignTxBlock :', typeof walletObj.signTransactionBlock === 'function');
-    console.log('chain          : sui:testnet');
-    console.groupEnd();
-
+    console.warn(`[ReliefChain] ▶ PATH D: Legacy provider (${actionLabel})`);
     if (typeof walletObj.signTransaction !== 'function' &&
         typeof walletObj.signTransactionBlock !== 'function') {
-      throw new Error(
-        'Legacy wallet does not support signTransaction or signTransactionBlock. ' +
-        'Install or update to the latest Slush Wallet extension.'
-      );
+      throw new Error('Legacy wallet missing signing methods.');
     }
-
     let signedResult;
     if (typeof walletObj.signTransaction === 'function') {
       signedResult = await walletObj.signTransaction({ transaction: tx, chain: 'sui:testnet' });
     } else {
       signedResult = await walletObj.signTransactionBlock({ transactionBlock: tx, chain: 'sui:testnet' });
     }
-
     const txBytes   = signedResult?.bytes ?? signedResult?.transactionBytes ?? signedResult?.transactionBlockBytes;
     const signature = signedResult?.signature;
-
-    if (!txBytes || !signature) {
-      throw new Error('Legacy provider signing response is missing bytes or signature.');
-    }
-
+    if (!txBytes || !signature) throw new Error('Legacy signing response missing bytes or signature.');
     executeResult = await _broadcast(txBytes, signature);
   }
 
   else {
     throw new Error(
-      'Connected wallet supports none of the known Sui signing features.\n' +
-      `Supported features: ${featKeys.join(', ')}\n` +
-      'Please install or update to the latest Slush Wallet extension.'
+      'Wallet supports none of the known Sui signing features.\n' +
+      `Supported: ${featKeys.join(', ')}`
     );
   }
 
   return executeResult;
 }
 
+
+// ════════════════════════════════════════════════════════════════════
+// MOVE CONTRACT CALL BUILDERS
+// ════════════════════════════════════════════════════════════════════
+
+// ── Donate (the core fix) ─────────────────────────────────────────
+/**
+ * Builds a PTB that calls relief_chain::donate, splitting exact amount
+ * from tx.gas and passing it into the Campaign's treasury.
+ *
+ * @param {object} wallet - Connected wallet
+ * @param {string} senderAddress - Donor's address
+ * @param {string} campaignObjectId - The shared Campaign object ID on Sui
+ * @param {number} amountSui - Amount in SUI (e.g. 1.5 for 1.5 SUI)
+ */
+export async function donateSuiOnChain(wallet, senderAddress, campaignObjectId, amountSui) {
+  // Pre-flight validation
+  if (typeof amountSui !== 'number' || isNaN(amountSui) || amountSui <= 0) {
+    throw new Error(`Invalid donation amount: "${amountSui}". Must be a positive number.`);
+  }
+  if (!campaignObjectId || !campaignObjectId.startsWith('0x')) {
+    throw new Error(`Invalid campaign object ID: "${campaignObjectId}". Must be a valid Sui object ID.`);
+  }
+
+  // Balance check
+  try {
+    const bal = await getSuiBalance(senderAddress);
+    const needed = amountSui + 0.05;
+    if (bal < needed) {
+      throw new Error(
+        `Insufficient SUI: wallet has ${bal.toFixed(4)} SUI but needs ≥ ${needed.toFixed(4)} SUI ` +
+        `(amount + gas). Get testnet SUI at https://faucet.sui.io`
+      );
+    }
+    console.log(`[ReliefChain] ✔ Balance OK: ${bal.toFixed(4)} SUI (need ${needed.toFixed(4)})`);
+  } catch (e) {
+    if (e.message.includes('Insufficient SUI')) throw e;
+    console.warn('[ReliefChain] Balance check non-fatal:', e.message);
+  }
+
+  const PACKAGE_ID = getPackageId();
+  const amountInMist = BigInt(Math.floor(amountSui * 1_000_000_000));
+
+  const tx = new Transaction();
+
+  // Split exact donation amount from gas coin → Coin<SUI>
+  const [donationCoin] = tx.splitCoins(tx.gas, [tx.pure.u64(amountInMist)]);
+
+  // Call the Move contract: donate(campaign, payment, amount)
+  tx.moveCall({
+    target: `${PACKAGE_ID}::relief_chain::donate`,
+    arguments: [
+      tx.object(campaignObjectId),     // &mut Campaign (shared object)
+      donationCoin,                     // &mut Coin<SUI>
+      tx.pure.u64(amountInMist),        // amount: u64
+    ],
+  });
+
+  // Transfer remaining coin back to sender (prevents UnusedValueWithoutDrop in PTB)
+  tx.transferObjects([donationCoin], tx.pure.address(senderAddress));
+
+  console.log(`[ReliefChain] 📦 Built donate PTB: ${amountSui} SUI → Campaign ${campaignObjectId}`);
+
+  const result = await signAndExecuteTx(wallet, senderAddress, tx, `donate ${amountSui} SUI`);
+  const digest = result?.digest || result?.effects?.transactionEffects?.transactionDigest || '';
+
+  console.log(`[ReliefChain] ✅ Donation confirmed! Digest: ${digest}`);
+  console.log(`[ReliefChain] Explorer: https://suiscan.xyz/testnet/tx/${digest}`);
+
+  return { digest, rawResult: result?.rawResult || result };
+}
+
+
+// ── Create Campaign ───────────────────────────────────────────────
+/**
+ * Calls relief_chain::create_campaign on-chain.
+ * Returns { digest, campaignObjectId? }
+ */
+export async function createCampaignOnChain(wallet, senderAddress, { title, description, location, severity, goalSui }) {
+  if (!title || !description || !location) {
+    throw new Error('Campaign title, description, and location are required.');
+  }
+  if (!goalSui || goalSui <= 0) {
+    throw new Error('Campaign goal must be a positive number in SUI.');
+  }
+
+  const PACKAGE_ID = getPackageId();
+  const goalInMist = BigInt(Math.floor(goalSui * 1_000_000_000));
+
+  const tx = new Transaction();
+  tx.moveCall({
+    target: `${PACKAGE_ID}::relief_chain::create_campaign`,
+    arguments: [
+      tx.pure.string(title),
+      tx.pure.string(description),
+      tx.pure.string(location),
+      tx.pure.u8(severity || 3),
+      tx.pure.u64(goalInMist),
+    ],
+  });
+
+  console.log(`[ReliefChain] 📦 Built create_campaign PTB: "${title}" goal=${goalSui} SUI`);
+  const result = await signAndExecuteTx(wallet, senderAddress, tx, `create_campaign "${title}"`);
+
+  // Try to extract the created Campaign object ID from the result
+  let campaignObjectId = null;
+  try {
+    const created = result?.rawResult?.effects?.created || [];
+    // The Campaign is the shared object
+    const sharedObj = created.find(o => o.owner === 'Shared' || o.owner?.Shared);
+    if (sharedObj) campaignObjectId = sharedObj.reference?.objectId || sharedObj.objectId;
+  } catch (_) {}
+
+  return { digest: result.digest, campaignObjectId };
+}
+
+
+// ── Verify Campaign ───────────────────────────────────────────────
+export async function verifyCampaignOnChain(wallet, senderAddress, verifierCapId, campaignObjectId) {
+  const PACKAGE_ID = getPackageId();
+  const tx = new Transaction();
+  tx.moveCall({
+    target: `${PACKAGE_ID}::relief_chain::verify_campaign`,
+    arguments: [
+      tx.object(verifierCapId),
+      tx.object(campaignObjectId),
+    ],
+  });
+  return signAndExecuteTx(wallet, senderAddress, tx, 'verify_campaign');
+}
+
+
+// ── Add Milestone ─────────────────────────────────────────────────
+export async function addMilestoneOnChain(wallet, senderAddress, campaignAdminCapId, campaignObjectId, { description, allocationSui, beneficiary }) {
+  const PACKAGE_ID = getPackageId();
+  const allocationMist = BigInt(Math.floor(allocationSui * 1_000_000_000));
+  const tx = new Transaction();
+  tx.moveCall({
+    target: `${PACKAGE_ID}::relief_chain::add_milestone`,
+    arguments: [
+      tx.object(campaignAdminCapId),
+      tx.object(campaignObjectId),
+      tx.pure.string(description),
+      tx.pure.u64(allocationMist),
+      tx.pure.address(beneficiary),
+    ],
+  });
+  return signAndExecuteTx(wallet, senderAddress, tx, 'add_milestone');
+}
+
+
+// ── Attach Evidence ───────────────────────────────────────────────
+export async function attachEvidenceOnChain(wallet, senderAddress, campaignAdminCapId, campaignObjectId, {
+  milestoneIndex, evidenceId, walrusBlobId, contentHash, mimeType, title, metadata
+}) {
+  const PACKAGE_ID = getPackageId();
+  const tx = new Transaction();
+  tx.moveCall({
+    target: `${PACKAGE_ID}::relief_chain::attach_evidence`,
+    arguments: [
+      tx.object(campaignAdminCapId),
+      tx.object(campaignObjectId),
+      tx.pure.u64(milestoneIndex),
+      tx.pure.string(evidenceId),
+      tx.pure.string(walrusBlobId),
+      tx.pure.string(contentHash),
+      tx.pure.string(mimeType),
+      tx.pure.string(title),
+      tx.pure.string(metadata || ''),
+      tx.object('0x6'), // Clock object (system)
+    ],
+  });
+  return signAndExecuteTx(wallet, senderAddress, tx, 'attach_evidence');
+}
+
+
+// ── Approve Milestone ─────────────────────────────────────────────
+export async function approveMilestoneOnChain(wallet, senderAddress, verifierCapId, campaignObjectId, milestoneIndex) {
+  const PACKAGE_ID = getPackageId();
+  const tx = new Transaction();
+  tx.moveCall({
+    target: `${PACKAGE_ID}::relief_chain::approve_milestone`,
+    arguments: [
+      tx.object(verifierCapId),
+      tx.object(campaignObjectId),
+      tx.pure.u64(milestoneIndex),
+    ],
+  });
+  return signAndExecuteTx(wallet, senderAddress, tx, `approve_milestone #${milestoneIndex}`);
+}
+
+
+// ── Release Funds ─────────────────────────────────────────────────
+export async function releaseFundsOnChain(wallet, senderAddress, verifierCapId, campaignObjectId, milestoneIndex, amountSui) {
+  const PACKAGE_ID = getPackageId();
+  const amountMist = BigInt(Math.floor(amountSui * 1_000_000_000));
+  const tx = new Transaction();
+  tx.moveCall({
+    target: `${PACKAGE_ID}::relief_chain::release_funds`,
+    arguments: [
+      tx.object(verifierCapId),
+      tx.object(campaignObjectId),
+      tx.pure.u64(milestoneIndex),
+      tx.pure.u64(amountMist),
+    ],
+  });
+  return signAndExecuteTx(wallet, senderAddress, tx, `release_funds ${amountSui} SUI`);
+}
+
+
+// ── Complete Campaign ─────────────────────────────────────────────
+export async function completeCampaignOnChain(wallet, senderAddress, verifierCapId, campaignObjectId) {
+  const PACKAGE_ID = getPackageId();
+  const tx = new Transaction();
+  tx.moveCall({
+    target: `${PACKAGE_ID}::relief_chain::complete_campaign`,
+    arguments: [
+      tx.object(verifierCapId),
+      tx.object(campaignObjectId),
+    ],
+  });
+  return signAndExecuteTx(wallet, senderAddress, tx, 'complete_campaign');
+}
+
+
+// ── Cancel Campaign ───────────────────────────────────────────────
+export async function cancelCampaignOnChain(wallet, senderAddress, verifierCapId, campaignObjectId, reason) {
+  const PACKAGE_ID = getPackageId();
+  const tx = new Transaction();
+  tx.moveCall({
+    target: `${PACKAGE_ID}::relief_chain::cancel_campaign`,
+    arguments: [
+      tx.object(verifierCapId),
+      tx.object(campaignObjectId),
+      tx.pure.string(reason || 'Cancelled'),
+    ],
+  });
+  return signAndExecuteTx(wallet, senderAddress, tx, 'cancel_campaign');
+}
+
+
 // ── Broadcast helper ──────────────────────────────────────────────
 async function _broadcast(txBytes, signature) {
-  console.log('[ReliefChain] Broadcasting via Tatum RPC...');
-  console.log('[ReliefChain] txBytes  (first 40):', txBytes.slice(0, 40) + '...');
-  console.log('[ReliefChain] signature (first 40):', signature.slice(0, 40) + '...');
+  console.log('[ReliefChain] Broadcasting via RPC...');
 
   const payload = [
     txBytes,
@@ -690,7 +695,6 @@ async function _broadcast(txBytes, signature) {
   const digest = result?.digest ?? '';
   console.log('[ReliefChain] ✅ Broadcast successful! Digest:', digest);
   console.log('[ReliefChain] Explorer: https://suiscan.xyz/testnet/tx/' + digest);
-  console.log('[ReliefChain] Full RPC response:', result);
 
   return result;
 }
@@ -699,16 +703,6 @@ async function _broadcast(txBytes, signature) {
 export function getCleanErrorMessage(err) {
   if (!err) return 'Unknown blockchain error.';
   if (typeof err === 'string') return err;
-
-  console.error('[ReliefChain] Raw error object:');
-  console.error("Raw error:", err);
-  console.error("Dir error:", err);
-  console.error("Keys:", Object.keys(err || {}));
-  console.error("Cause:", err?.cause);
-  console.error("Data:", err?.data);
-  console.error("Code:", err?.code);
-  console.error("Meta:", err?.meta);
-  console.error("Shape:", err?.shape);
 
   return (
     err.cause?.message  ??

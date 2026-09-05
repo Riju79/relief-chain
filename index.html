@@ -2963,9 +2963,19 @@
     }
   </script>
 
+  <!-- ReliefChain Package Configuration -->
+  <script>
+    window.RELIEFCHAIN_CONFIG = {
+      packageId: '0x9c0e1fe411f3f1bc9b877710d000ef4ca3113e3461cdffed469be1f1bd7b5bfe',
+      adminCapId: '0x21e2ca751c1157689c086dd223487841fe4ef53b5e95ac0c935f009261c5191f',
+      verifierCapId: '0xf5d8fbb6bb38c2b5be734f2fd8e4ac5797e033b9f073448267f5adb953e1921c',
+      network: 'testnet',
+    };
+  </script>
+
   <!-- Sui Blockchain Integration Client Script -->
   <script type="module">
-    import { getSuiBalance, getLatestCheckpoint, getWalletsList, connectWallet, donateSuiOnChain, getCleanErrorMessage } from './suiConnection.js?v=9';
+    import { getSuiBalance, getLatestCheckpoint, getWalletsList, connectWallet, donateSuiOnChain, createCampaignOnChain, fetchCampaignOnChain, getCleanErrorMessage } from './suiConnection.js?v=10';
 
     // State Variables
     let connectedWallet = null;
@@ -3404,50 +3414,58 @@
         if (walletName === 'demo' || !connectedWallet || connectedWallet.name === 'Demo Mode' || connectedWallet.name === 'Demo Mode (Sim)' || connectedWallet.name === 'Demo Simulation') {
           throw new Error('Real Sui wallet connection required to broadcast transaction. Demo mode cannot create real blockchain state.');
         } else {
-          // Real wallet flow
+          // Real wallet flow — calls Move contract via tx.moveCall
           if (selectedToken === 'SUI') {
-            updateTxProgress('Initiating Transaction', 'Preparing transaction block and requesting signature...');
+            updateTxProgress('Initiating On-Chain Transaction', 'Building Move contract call and requesting wallet signature...');
             
-            // Get the campaign recipient address from state
+            // Get the on-chain Campaign object ID
             const campaign = globalCampaigns.find(c => c.id === selectedCampaignId);
-            const recipient = campaign?.walletAddress;
-            if (!recipient) {
-              throw new Error('Selected campaign does not have a valid beneficiary wallet address on chain.');
+            const campaignObjectId = campaign?.onChainObjectId || campaign?.walletAddress;
+            if (!campaignObjectId || !campaignObjectId.startsWith('0x')) {
+              throw new Error('Selected campaign does not have a valid on-chain Campaign object ID. This campaign may be a demo placeholder.');
             }
 
-            console.log('[Sui Donation Flow Frontend Audit Log]:', {
+            console.log('[Sui Donation Flow — Move Contract Call]:', {
               connectedWallet: connectedWallet?.name || 'Unknown Wallet',
-              currentAccount: userAddress,
-              addressUsedForDonation: userAddress,
-              network: 'sui:testnet',
-              transactionPayload: {
-                sender: userAddress,
-                recipient: recipient,
-                amountSui: amount,
-                token: selectedToken
-              }
+              sender: userAddress,
+              campaignObjectId: campaignObjectId,
+              amountSui: amount,
+              moveTarget: '::relief_chain::donate',
             });
             
-            const result = await donateSuiOnChain(connectedWallet, userAddress, recipient, amount);
+            const result = await donateSuiOnChain(connectedWallet, userAddress, campaignObjectId, amount);
             txHash = result?.digest || result?.effects?.transactionEffects?.transactionDigest || '';
             if (!txHash) {
-              throw new Error('Sui transaction execution failed: No verified transaction digest returned by wallet.');
+              throw new Error('Move contract call failed: No verified transaction digest returned by wallet.');
             }
           } else {
             throw new Error('Direct USDC stablecoin payments require Cetus liquidity pool router integration on testnet. Please donate in SUI.');
           }
         }
  
-        // Update stats on card
+        // Update stats on card — read real on-chain state after donation
         const card = document.querySelector(`.campaign-card[data-campaign-id="${selectedCampaignId}"]`);
         if (card) {
+          const campaign = globalCampaigns.find(c => c.id === selectedCampaignId);
+          const campaignObjectId = campaign?.onChainObjectId || campaign?.walletAddress;
+
+          // Try to fetch real on-chain state; fall back to optimistic update
+          let newRaised = parseFloat(card.querySelector('.raised-amount')?.innerText?.replace(/,/g, '') || '0') + suiEquivalent;
+          try {
+            if (campaignObjectId && campaignObjectId.startsWith('0x')) {
+              const onChain = await fetchCampaignOnChain(campaignObjectId);
+              newRaised = onChain.fundsRaised;
+              console.log('[ReliefChain] ✔ On-chain funds_raised:', newRaised, 'SUI, treasury:', onChain.treasury, 'SUI');
+            }
+          } catch (fetchErr) {
+            console.warn('[ReliefChain] Could not fetch on-chain state, using optimistic value:', fetchErr.message);
+          }
+
           const raisedSpan = card.querySelector('.raised-amount');
-          const currentRaised = parseFloat(raisedSpan.innerText.replace(/,/g, ''));
-          const newRaised = currentRaised + suiEquivalent;
-          raisedSpan.innerText = newRaised.toLocaleString();
+          if (raisedSpan) raisedSpan.innerText = newRaised.toLocaleString();
  
           // Re-evaluate progress bar
-          const goalText = card.querySelector('.campaign-stats-goal').innerText;
+          const goalText = card.querySelector('.campaign-stats-goal')?.innerText || '0';
           const goal = parseFloat(goalText.replace(/[^0-9.]/g, ''));
           const percent = Math.min((newRaised / goal) * 100, 100);
           const progressFill = card.querySelector('.campaign-progress-fill');
@@ -4212,13 +4230,17 @@
             campaignsData.campaigns.forEach(c => {
               const card = document.createElement('div');
               card.className = 'campaign-card';
+              card.setAttribute('data-campaign-id', c.id);
               card.style.margin = '0';
 
               const percent = Math.min((c.raised / c.goal) * 100, 100);
+              const onChainId = c.onChainObjectId || c.walletAddress;
+              const isOnChain = onChainId && onChainId.startsWith('0x') && onChainId.length === 66 && !c.isDemo;
 
               card.innerHTML = `
                 <div class="campaign-header">
                   <span class="campaign-tag">${c.tag}</span>
+                  ${isOnChain ? `<span class="on-chain-badge" style="font-size:10px; font-weight:700; color:#22c55e; background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.3); padding:2px 8px; border-radius:100px; display:inline-flex; align-items:center; gap:4px;">⛓️ On-Chain</span>` : ''}
                   <h3>${c.title}</h3>
                 </div>
                 <p>${c.desc}</p>
@@ -4235,7 +4257,7 @@
 
                 <div class="campaign-progress-container">
                   <div class="campaign-stats-row">
-                    <div><span class="raised-amount">${c.raised.toLocaleString()}</span> SUI</div>
+                    <div><span class="raised-amount">${c.raised.toLocaleString()}</span> SUI <span class="on-chain-treasury" style="font-size:11px; opacity:0.6; margin-left:4px;"></span></div>
                     <div style="opacity:0.6;">Goal: ${c.goal.toLocaleString()} SUI</div>
                   </div>
                   <div class="campaign-progress-bar"><div class="campaign-progress-fill" style="width: ${percent}%"></div></div>
@@ -4245,6 +4267,26 @@
                 </div>
               `;
               grid.appendChild(card);
+
+              // Live on-chain sync for real Sui campaigns
+              if (isOnChain) {
+                fetchCampaignOnChain(onChainId).then(onChain => {
+                  const raisedEl = card.querySelector('.raised-amount');
+                  if (raisedEl) raisedEl.innerText = onChain.fundsRaised.toLocaleString();
+                  const treasuryEl = card.querySelector('.on-chain-treasury');
+                  if (treasuryEl) treasuryEl.innerText = `(${onChain.treasury.toLocaleString()} SUI in Treasury)`;
+                  const fillEl = card.querySelector('.campaign-progress-fill');
+                  if (fillEl && c.goal > 0) {
+                    const realPercent = Math.min((onChain.fundsRaised / c.goal) * 100, 100);
+                    fillEl.style.width = `${realPercent}%`;
+                  }
+                  c.raised = onChain.fundsRaised;
+                  c.treasury = onChain.treasury;
+                  console.log(`[ReliefChain] ✔ Synced campaign ${c.id} from Sui RPC: raised=${onChain.fundsRaised}, treasury=${onChain.treasury}`);
+                }).catch(e => {
+                  console.warn(`[ReliefChain] Could not read on-chain state for ${onChainId}:`, e.message);
+                });
+              }
             });
           }
         }

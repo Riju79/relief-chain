@@ -11,6 +11,8 @@ export interface AppConfig {
     rpcUrl: string;
     packageId: string;
     moduleName: string;
+    adminCapId: string;
+    verifierCapId: string;
   };
   walrus: {
     publisherUrl: string;
@@ -34,13 +36,25 @@ if ((process.env.NETWORK as string) === 'mainnet') {
   throw new Error('[CRITICAL SAFETY GUARD] ReliefChain is configured for Testnet only. Mainnet configuration is explicitly blocked during development phase.');
 }
 
+// Strict Startup Guard: RELIEFCHAIN_PACKAGE_ID must be set — no silent zero-address fallback
+const packageId = process.env.RELIEFCHAIN_PACKAGE_ID;
+if (!packageId || packageId === '0x0000000000000000000000000000000000000000000000000000000000000000') {
+  throw new Error(
+    '[STARTUP FATAL] RELIEFCHAIN_PACKAGE_ID is not set or is the zero-address placeholder.\n' +
+    'Deploy the Move package with `sui client publish` and set the resulting Package ID in .env.\n' +
+    'Example: RELIEFCHAIN_PACKAGE_ID=0xabc123...'
+  );
+}
+
 export const config: AppConfig = {
   env,
   sui: {
     network: suiNetwork,
     rpcUrl: process.env.SUI_RPC_URL || 'https://fullnode.testnet.sui.io:443',
-    packageId: process.env.RELIEFCHAIN_PACKAGE_ID || '0x0000000000000000000000000000000000000000000000000000000000000000',
-    moduleName: 'relief_chain'
+    packageId,
+    moduleName: 'relief_chain',
+    adminCapId: process.env.ADMIN_CAP_OBJECT_ID || '',
+    verifierCapId: process.env.VERIFIER_CAP_OBJECT_ID || '',
   },
   walrus: {
     publisherUrl: process.env.WALRUS_PUBLISHER || 'https://publisher.walrus-testnet.walrus.space',

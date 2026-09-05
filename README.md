@@ -77,6 +77,13 @@ Located in [`move/sources/relief_chain.move`](move/sources/relief_chain.move):
 - `VerifierCap`: Granted to vetted human auditors. Required to call `verify_campaign`, `approve_milestone`, `release_funds`, `complete_campaign`, `cancel_campaign`.
 - `CampaignAdminCap`: Issued to the campaign creator upon `create_campaign`. Required to call `add_milestone` and `attach_evidence`.
 
+### 🌐 Verified Sui Testnet Deployment
+- **Package ID:** [`0x9c0e1fe411f3f1bc9b877710d000ef4ca3113e3461cdffed469be1f1bd7b5bfe`](https://suiscan.xyz/testnet/package/0x9c0e1fe411f3f1bc9b877710d000ef4ca3113e3461cdffed469be1f1bd7b5bfe)
+- **AdminCap Object ID:** `0x21e2ca751c1157689c086dd223487841fe4ef53b5e95ac0c935f009261c5191f`
+- **VerifierCap Object ID:** `0xf5d8fbb6bb38c2b5be734f2fd8e4ac5797e033b9f073448267f5adb953e1921c`
+- **UpgradeCap Object ID:** `0xc462508fd6ea77cb21724d35b32a05d56160aac1dc6960d6424db96ace2dd006`
+- **Publish Transaction Digest:** [`83gRrNKmZ4WjVsRXnmEVstVEgUbeVEDuKLauLvfiUSnC`](https://suiscan.xyz/testnet/tx/83gRrNKmZ4WjVsRXnmEVstVEgUbeVEDuKLauLvfiUSnC)
+
 ---
 
 ## 🤖 Role of the AI Authenticity Engine
@@ -119,7 +126,9 @@ Create a `.env` file in the root directory:
 SUI_RPC_URL=https://fullnode.testnet.sui.io:443
 NETWORK=testnet
 PORT=3000
-NODE_ENV=development
+RELIEFCHAIN_PACKAGE_ID=0x9c0e1fe411f3f1bc9b877710d000ef4ca3113e3461cdffed469be1f1bd7b5bfe
+ADMIN_CAP_OBJECT_ID=0x21e2ca751c1157689c086dd223487841fe4ef53b5e95ac0c935f009261c5191f
+VERIFIER_CAP_OBJECT_ID=0xf5d8fbb6bb38c2b5be734f2fd8e4ac5797e033b9f073448267f5adb953e1921c
 ```
 
 ### 3. Run Development Servers
