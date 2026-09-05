@@ -1,4 +1,7 @@
 {
-  "buildCommand": null,
-  "outputDirectory": "."
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "rewrites": [
+    { "source": "/dashboard/evidence/:blobId", "destination": "/evidence.html" }
+  ]
 }

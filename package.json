@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "build": "vite build",
     "server": "tsx server.js",
     "start": "tsx server.js",
     "test": "tsx tests/indexer/testIndexer.ts && tsx tests/indexer/testRestartMidStream.ts && tsx tests/integration/testEvidenceIntegrity.ts",

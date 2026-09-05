@@ -85,7 +85,7 @@ function initDb() {
           severity: 'critical',
           desc: 'Emergency rescue and humanitarian support for families affected by severe flooding near the Brahmaputra river basin.',
           evidenceBlobId: 'walrus_blob_assam_flood_evidence_1',
-          evidenceUrl: 'http://localhost:3000/evidence__1.jpg',
+          evidenceUrl: '/api/evidence/raw/walrus_blob_assam_flood_evidence_1',
           walletAddress: '0x5313936ab87ed60dc8a11a1a1a1a1a1a1a1a1a1a100000000000000000000000',
           timestamp: Date.now() - 24 * 60 * 60 * 1000,
           status: 'approved',

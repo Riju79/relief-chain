@@ -22,7 +22,7 @@ build/
 .vite/
 
 # Temporary data and scratch files
-uploads/
+/uploads/
 indexer_db.json
 test_indexer_db.json
 .pgdata/

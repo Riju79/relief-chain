@@ -2921,12 +2921,18 @@
       adminCapId: '0x21e2ca751c1157689c086dd223487841fe4ef53b5e95ac0c935f009261c5191f',
       verifierCapId: '0xf5d8fbb6bb38c2b5be734f2fd8e4ac5797e033b9f073448267f5adb953e1921c',
       network: 'testnet',
+      backendUrl: (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+        ? (window.location.port === '5173' ? 'http://localhost:3000' : '')
+        : 'https://relief-chain.onrender.com'
     };
   </script>
 
   <!-- Sui Blockchain Integration Client Script -->
   <script type="module">
     import { getSuiBalance, getLatestCheckpoint, getWalletsList, connectWallet, donateSuiOnChain, createCampaignOnChain, fetchCampaignOnChain, getCleanErrorMessage, signPersonalMessage, checkUserCapabilities, verifyCampaignOnChain } from './suiConnection.js?v=12';
+
+    // Global Backend URL for API calls
+    const BACKEND_URL = window.RELIEFCHAIN_CONFIG?.backendUrl || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:3000' : 'https://relief-chain.onrender.com');
 
     // State Variables
     let connectedWallet = null;
@@ -3714,9 +3720,6 @@
     // ====================================================
     // WALRUS & SECURE BACKEND INTEGRATION SCRIPT LAYER
     // ====================================================
-    const BACKEND_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-      ? 'http://localhost:3000'
-      : 'https://relief-chain.onrender.com';
 
     // Helper to get evidence page URL adapting to Vite dev port vs Express backend port
     function getEvidencePageUrl(blobId) {
