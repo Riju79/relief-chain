@@ -1,4 +1,4 @@
-import { SuiEventIndexer, SuiEventRecord } from './eventIndexer.js';
+import { SuiEventIndexer, SuiEventRecord } from '../../src/indexer/eventIndexer.js';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';

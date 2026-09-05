@@ -148,24 +148,33 @@ Visit the application at `http://localhost:5173`.
 
 ## 🧪 Testing Suite
 
-### 1. Run Move Smart Contract Unit Tests
-```bash
-cd move
-sui move test
-```
-*Executes 5/5 Move unit tests covering lifecycle, duplicate checks, empty inputs, and authorization aborts.*
+ReliefChain features an organized test suite located in `tests/` and `move/sources/`:
 
-### 2. Run Sui Event Indexer & Deduplication Test
+### 1. Run Move Smart Contract Unit & Invariant Tests
 ```bash
-npx tsx src/indexer/testIndexer.ts
+npm run test:contracts
+# or: cd move && sui move test
 ```
+*Executes 14 Move unit, invariant, and property-based tests covering treasury conservation, capability isolation, and lifecycle aborts.*
 
-### 3. Run Real Sui Testnet & Walrus End-to-End Test
+### 2. Run Sui Event Indexer & Deduplication Tests
 ```bash
-npx tsx src/testRealTestnetE2E.ts
+npm run test:indexer
+npm run test:indexer:restart
 ```
 
-### 4. Build Production Frontend Bundle
+### 3. Run Authentication & Evidence Integrity Tests
+```bash
+npm run test:auth
+npm run test:integrity
+```
+
+### 4. Run Production Load & Capacity Benchmarks
+```bash
+npm run test:load
+```
+
+### 5. Build Production Frontend Bundle
 ```bash
 npx vite build
 ```

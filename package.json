@@ -6,7 +6,14 @@
   "scripts": {
     "dev": "vite",
     "server": "tsx server.js",
-    "start": "tsx server.js"
+    "start": "tsx server.js",
+    "test": "tsx tests/indexer/testIndexer.ts && tsx tests/indexer/testRestartMidStream.ts && tsx tests/integration/testEvidenceIntegrity.ts",
+    "test:indexer": "tsx tests/indexer/testIndexer.ts",
+    "test:indexer:restart": "tsx tests/indexer/testRestartMidStream.ts",
+    "test:auth": "tsx tests/integration/testAuthAndProtectedFlow.ts",
+    "test:integrity": "tsx tests/integration/testEvidenceIntegrity.ts",
+    "test:contracts": "cd move && sui move test",
+    "test:load": "tsx scripts/loadTestBackendAndIndexer.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.22.0",
