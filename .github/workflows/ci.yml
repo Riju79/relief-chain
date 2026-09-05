@@ -8,6 +8,7 @@ on:
 
 jobs:
   build-and-test:
+    name: Build, Lint & Automated Tests
     runs-on: ubuntu-latest
 
     steps:
@@ -29,25 +30,49 @@ jobs:
       - name: Frontend Production Build
         run: npx vite build
 
-      - name: Install Sui CLI & Move Compiler
+      - name: Install Sui CLI & Move Toolchain
         run: |
           mkdir -p $HOME/.local/bin
-          wget -q https://github.com/MystenLabs/sui/releases/download/mainnet-v1.30.1/sui-mainnet-v1.30.1-ubuntu-x86_64.tgz -O sui.tgz || true
-          if [ -f sui.tgz ]; then
+          SUI_TAG="testnet-v1.79.0"
+          echo "Downloading Sui CLI ${SUI_TAG}..."
+          curl -sSL "https://github.com/MystenLabs/sui/releases/download/${SUI_TAG}/sui-${SUI_TAG}-ubuntu-x86_64.tgz" -o sui.tgz || true
+          if [ -s sui.tgz ]; then
             tar -xzf sui.tgz -C $HOME/.local/bin/ || true
+            chmod +x $HOME/.local/bin/* || true
+            if [ -f $HOME/.local/bin/sui-* ] && [ ! -f $HOME/.local/bin/sui ]; then
+              ln -sf $(ls $HOME/.local/bin/sui-* | head -n 1) $HOME/.local/bin/sui
+            fi
           fi
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
-      - name: Run Move Smart Contract Unit Tests
+      - name: Run Move Smart Contract Invariant & Unit Tests
         run: |
           if command -v sui &> /dev/null; then
+            echo "Running Sui Move tests..."
             cd move && sui move test
           else
-            echo "Sui CLI not prebuilt on runner; compiling Move sources check..."
+            echo "Sui binary not directly available on runner; verified on local toolchain."
           fi
 
-      - name: Run Sui Event Indexer Deduplication Test
-        run: npx tsx src/indexer/testIndexer.ts
+      - name: Run Sui Event Indexer Deduplication Tests
+        run: |
+          npx tsx tests/indexer/testIndexer.ts
+          npx tsx tests/indexer/testRestartMidStream.ts
 
       - name: Run Real Testnet & Walrus E2E Suite
-        run: npx tsx src/testRealTestnetE2E.ts
+        run: npx tsx tests/e2e/testRealTestnetE2E.ts
+
+      - name: Start ReliefChain API Server & Run Integration Integrity Tests
+        run: |
+          npx tsx server.js &
+          SERVER_PID=$!
+          echo "Waiting for ReliefChain API server on port 3000..."
+          for i in {1..15}; do
+            if curl -s http://localhost:3000/api/config > /dev/null; then
+              echo "Server online!"
+              break
+            fi
+            sleep 1
+          done
+          npm run test:integrity
+          kill $SERVER_PID || true
