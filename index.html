@@ -2632,7 +2632,7 @@
 
       // 1. Earth mesh
       const earthGeometry = new THREE.SphereGeometry(1.8, 64, 64);
-      const earthTexture = textureLoader.load('./earth-night.jpg');
+      const earthTexture = textureLoader.load('/earth-night.jpg');
       const earthMaterial = new THREE.MeshPhongMaterial({
         map: earthTexture,
         shininess: 25,
@@ -2643,7 +2643,7 @@
 
       // 2. Cloud layer mesh
       const cloudsGeometry = new THREE.SphereGeometry(1.815, 64, 64);
-      const cloudsTexture = textureLoader.load('./earth-clouds.png');
+      const cloudsTexture = textureLoader.load('/earth-clouds.png');
       const cloudsMaterial = new THREE.MeshPhongMaterial({
         map: cloudsTexture,
         transparent: true,
